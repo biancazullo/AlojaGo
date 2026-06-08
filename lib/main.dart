@@ -216,7 +216,7 @@ class _AlojaHomePageState extends State<AlojaHomePage>
       final result = await Navigator.of(context).push<Map<String, String>>(
         MaterialPageRoute(
           builder: (context) => ProfilePage(
-            profile: {
+            userData: {
               'name': _userFullName,
               'email': _userEmail,
               'phone': _userPhone,
@@ -227,21 +227,34 @@ class _AlojaHomePageState extends State<AlojaHomePage>
         ),
       );
 
-      if (result != null) {
-        setState(() {
-          _userFullName = result['name'] ?? _userFullName;
-          _userEmail = result['email'] ?? _userEmail;
-          _userPhone = result['phone'] ?? _userPhone;
-          _userGender = result['gender'] ?? _userGender;
-          _userBirthday = result['birthday'] ?? _userBirthday;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Perfil actualizado'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+if (result != null) {
+        // 1. Si el perfil devolvió la acción de cerrar sesión
+        if (result['action'] == 'logout') {
+          setState(() {
+            _isLoggedIn = false;
+            _userFullName = '';
+            _userEmail = '';
+            _userPhone = '';
+            _userGender = '';
+            _userBirthday = '';
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sesión cerrada correctamente'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        } else {
+          // 2. Si solo editó sus datos, los actualizamos normalmente
+          setState(() {
+            _userFullName = result['name'] ?? _userFullName;
+            _userEmail = result['email'] ?? _userEmail;
+            _userPhone = result['phone'] ?? _userPhone;
+            _userGender = result['gender'] ?? _userGender;
+            _userBirthday = result['birthday'] ?? _userBirthday;
+          });
+        }
       }
       return;
     }

@@ -1,53 +1,48 @@
+import 'dart:convert'; // Para convertir la imagen a texto (Base64)
+import 'dart:typed_data'; // Para manejar los bytes de la imagen en Web
 import 'package:flutter/material.dart';
-
-Color _profileBackground(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF101620)
-    : const Color(0xFFF8F4EC);
-Color _profileSurface(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF16212A)
-    : const Color(0xFFFFFFFF);
-Color _profileSurfaceVariant(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF24343F)
-    : const Color(0xFFEDE8DA);
-Color _profilePrimary(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF5DBEAA)
-    : const Color(0xFF1B4332);
-Color _profilePrimaryLight(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF8CE1C7)
-    : const Color(0xFF2D6A4F);
-Color _profileOnSurface(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFFFFFFFF)
-    : const Color(0xFF1B4332);
-Color _profileOnSurfaceVariant(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFFB1C6D1)
-    : const Color(0xFF2D6A4F);
+import 'package:image_picker/image_picker.dart'; // Selector de imágenes
 
 class ProfilePage extends StatefulWidget {
-  final Map<String, String> profile;
+  final Map<String, String> userData;
 
-  const ProfilePage({super.key, required this.profile});
+  const ProfilePage({super.key, required this.userData});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _birthdayController;
-  String? _selectedGender;
-  bool _obscurePassword = true;
+  late Map<String, String> _currentUserData;
+  
+  // Controladores para el formulario de edición
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _birthdayController;
+  String _selectedGender = 'Otro';
+
+  // Variable para almacenar los bytes de la foto de perfil
+  Uint8List? _profileImageBytes;
+
+  // Variable de estado para alternar entre el Menú y el Formulario de Edición
+  bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.profile['name'] ?? '');
-    _emailController = TextEditingController(text: widget.profile['email'] ?? '');
-    _phoneController = TextEditingController(text: widget.profile['phone'] ?? '');
-    _birthdayController = TextEditingController(text: widget.profile['birthday'] ?? '');
-    _selectedGender = widget.profile['gender']?.isNotEmpty == true ? widget.profile['gender'] : null;
+    _currentUserData = Map<String, String>.from(widget.userData);
+    
+    _nameController = TextEditingController(text: _currentUserData['name'] ?? '');
+    _emailController = TextEditingController(text: _currentUserData['email'] ?? '');
+    _phoneController = TextEditingController(text: _currentUserData['phone'] ?? '');
+    _birthdayController = TextEditingController(text: _currentUserData['birthday'] ?? '01/01/1995');
+    _selectedGender = _currentUserData['gender'] ?? 'Otro';
+
+    // Si ya existe una foto guardada, la decodificamos
+    if (_currentUserData['profileImage'] != null && _currentUserData['profileImage']!.isNotEmpty) {
+      _profileImageBytes = base64Decode(_currentUserData['profileImage']!);
+    }
   }
 
   @override
@@ -59,37 +54,53 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  Widget _buildTextField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    bool obscureText = false,
-    Widget? suffix,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
+  // Función para abrir el selector de archivos
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+    
+    if (image != null) {
+      final Uint8List imageBytes = await image.readAsBytes();
+      setState(() {
+        _profileImageBytes = imageBytes;
+        _currentUserData['profileImage'] = base64Encode(imageBytes);
+      });
+    }
+  }
+
+  Widget _buildMenuButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          filled: true,
-          fillColor: _profileSurface(context),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: _profileSurfaceVariant(context)),
+      padding: const EdgeInsets.only(bottom: 20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(35),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(35),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+            border: Border.all(color: const Color(0xFFE2E6D7), width: 1),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: _profilePrimary(context)),
+          child: Row(
+            children: [
+              Icon(icon, size: 32, color: const Color(0xFF5A5A5A)),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(0xFF5A5A5A))),
+              ),
+            ],
           ),
-          suffixIcon: suffix,
         ),
       ),
     );
@@ -97,254 +108,289 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 950;
+
     return Scaffold(
-      backgroundColor: _profileBackground(context),
+      backgroundColor: const Color(0xFFF4F7F2), 
       appBar: AppBar(
-        backgroundColor: _profileBackground(context),
+        toolbarHeight: 85,
+        backgroundColor: const Color(0xFFE9EFE6), 
         elevation: 0,
-        iconTheme: IconThemeData(color: _profilePrimary(context)),
-        title: Text(
-          'Mi perfil',
-          style: TextStyle(
-            color: _profilePrimary(context),
-            fontFamily: 'Georgia',
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+        automaticallyImplyLeading: false,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Image.network('https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', height: 55, fit: BoxFit.contain),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(_currentUserData),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF1B4332),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                ),
+                child: const Text('Inicio', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(40),
+        child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: _profileSurface(context),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: _profilePrimary(context).withOpacity(0.12),
-                    blurRadius: 30,
-                    offset: const Offset(0, 12),
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: isDesktop
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 320, child: _buildUserCard()),
+                      const SizedBox(width: 50),
+                      Expanded(child: _isEditing ? _buildEditForm() : _buildMenuOptions()),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      _buildUserCard(),
+                      const SizedBox(height: 40),
+                      _isEditing ? _buildEditForm() : _buildMenuOptions(),
+                    ],
                   ),
-                ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget del panel lateral del usuario (Aquí unificamos el botón de la cámara)
+  Widget _buildUserCard() {
+    String name = _currentUserData['name'] ?? 'Usuario';
+    String email = _currentUserData['email'] ?? 'correo@unimet.edu.ve';
+    String phone = _currentUserData['phone'] ?? '+58 --- -------';
+    String birthday = _currentUserData['birthday'] ?? 'dd/mm/aaaa';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 35),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Stack dinámico: si está editando, añade el botón flotante de la cámara en la tarjeta izquierda
+          Stack(
+            children: [
+              Container(
+                width: 110,
+                height: 110,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE5E5E5),
+                  shape: BoxShape.circle,
+                ),
+                child: _profileImageBytes != null
+                    ? ClipOval(child: Image.memory(_profileImageBytes!, fit: BoxFit.cover))
+                    : const Icon(Icons.person, size: 70, color: Color(0xFF656565)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Edita tu información',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: _profilePrimary(context),
+              if (_isEditing) // SOLO muestra la cámara si estamos en la pantalla de editar
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: InkWell(
+                    onTap: _pickImage,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2A6248),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Actualiza tu nombre, correo y datos de contacto.',
-                    style: TextStyle(
-                      color: _profileOnSurfaceVariant(context),
-                      fontSize: 14,
-                      height: 1.6,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        _buildTextField(
-                          label: 'Nombre completo',
-                          hint: 'Tu nombre completo',
-                          controller: _nameController,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Ingresa tu nombre';
-                            }
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          label: 'Correo electrónico',
-                          hint: 'usuario@correo.unimet.edu.ve',
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Ingresa tu correo';
-                            }
-                            
-                            // Convertimos a minúsculas y limpiamos espacios vacíos
-                            final email = value.trim().toLowerCase();
-                            
-                            // 1. Validación de formato de correo general
-                            if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").hasMatch(email)) {
-                              return 'Correo no válido';
-                            }
-                            
-                            // 2. Validación estricta del dominio UNIMET
-                            if (!email.endsWith('@correo.unimet.edu.ve')) {
-                              return 'Solo se permiten correos @correo.unimet.edu.ve';
-                            }
-                            
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          label: 'Teléfono',
-                          hint: '+58 412 1234567',
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Ingresa tu teléfono';
-                            }
-                            if (!RegExp(r'^[0-9+\s-]{7,20}$').hasMatch(value.trim())) {
-                              return 'Teléfono no válido';
-                            }
-                            return null;
-                          },
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedGender,
-                            decoration: InputDecoration(
-                              labelText: 'Sexo',
-                              filled: true,
-                              fillColor: _profileSurface(context),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: _profileSurfaceVariant(context)),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: _profilePrimary(context)),
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
-                              DropdownMenuItem(value: 'Femenino', child: Text('Femenino')),
-                              DropdownMenuItem(value: 'Otro', child: Text('Otro')),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedGender = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Selecciona tu sexo';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: TextFormField(
-                            controller: _birthdayController,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              labelText: 'Fecha de nacimiento',
-                              hintText: 'DD/MM/AAAA',
-                              filled: true,
-                              fillColor: _profileSurface(context),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: _profileSurfaceVariant(context)),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: _profilePrimary(context)),
-                              ),
-                              suffixIcon: Icon(
-                                Icons.calendar_today,
-                                color: _profilePrimaryLight(context),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Selecciona tu fecha de nacimiento';
-                              }
-                              return null;
-                            },
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.tryParse(_birthdayController.text.replaceAll('/', '-')) ?? DateTime(1995, 1, 1),
-                                firstDate: DateTime(1900),
-                                lastDate: DateTime.now(),
-                                builder: (context, child) {
-                                  return Theme(
-                                    data: Theme.of(context).copyWith(
-                                      colorScheme: Theme.of(context).brightness == Brightness.dark
-                                          ? ColorScheme.dark(primary: _profilePrimary(context))
-                                          : ColorScheme.light(primary: _profilePrimary(context)),
-                                    ),
-                                    child: child!,
-                                  );
-                                },
-                              );
-                              if (picked != null) {
-                                _birthdayController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Valida el formulario antes de salir y devolver los datos actualizados
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  Navigator.of(context).pop({
-                                    'name': _nameController.text.trim(),
-                                    'email': _emailController.text.trim(),
-                                    'phone': _phoneController.text.trim(),
-                                    'gender': _selectedGender ?? '',
-                                    'birthday': _birthdayController.text.trim(),
-                                  });
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                // Forzamos un fondo verde oscuro visible para asegurar contraste
-                                backgroundColor: const Color(0xFF2D6A4F), 
-                                // Forzamos que el color base de los elementos del botón sea blanco
-                                foregroundColor: Colors.white, 
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 2,
-                              ),
-                              // Evaluamos si el campo de texto del nombre ya tiene información
-                              child: Text(
-                                _nameController.text.isNotEmpty ? 'Guardar cambios' : 'Volver',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: Colors.white, // Asegura doblemente las letras blancas
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF222222))),
+          const SizedBox(height: 4),
+          Text(email, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 35),
+          
+          _buildCardInfoRow('Se unió:', birthday),
+          _buildCardInfoRow('Teléfono:', phone),
+          _buildCardInfoRow('Contraseña:', '*********', trailing: const Icon(Icons.visibility_off_outlined, size: 18, color: Colors.black54)),
+          _buildCardInfoRow('Sitios Reservados:', '0'),
+          
+          const SizedBox(height: 40),
+          
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pop({'action': 'logout'}),
+            icon: const Icon(Icons.exit_to_app, color: Color(0xFFC84B22)),
+            label: const Text('Cerrar Sesión', style: TextStyle(color: Color(0xFFC84B22), fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardInfoRow(String label, String value, {Widget? trailing}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text('$label ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87), overflow: TextOverflow.ellipsis)),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuOptions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text('Gestiona tu cuenta', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black)),
+        const SizedBox(height: 35),
+        _buildMenuButton(
+          icon: Icons.settings,
+          title: 'Editar perfil de usuario',
+          onTap: () {
+            setState(() {
+              _nameController.text = _currentUserData['name'] ?? '';
+              _emailController.text = _currentUserData['email'] ?? '';
+              _phoneController.text = _currentUserData['phone'] ?? '';
+              _birthdayController.text = _currentUserData['birthday'] ?? '01/01/1995';
+              _selectedGender = _currentUserData['gender'] ?? 'Otro';
+              _isEditing = true;
+            });
+          },
+        ),
+        _buildMenuButton(icon: Icons.handyman_rounded, title: 'Administrar reservas y publicaciones', onTap: () => _showComingSoonSnackBar('Administración de reservas')),
+        _buildMenuButton(icon: Icons.support_agent_rounded, title: 'Contacto con el servicio técnico al cliente', onTap: () => _showComingSoonSnackBar('Servicio Técnico')),
+        _buildMenuButton(icon: Icons.engineering_rounded, title: 'Solicitar permiso para convertirse en administrador', onTap: () => _showComingSoonSnackBar('Solicitud de Administrator')),
+      ],
+    );
+  }
+
+  // Vista B: Formulario "Edita tu información" (Sin el círculo redundante del medio)
+  Widget _buildEditForm() {
+    return Container(
+      padding: const EdgeInsets.all(35),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF1B4332)), onPressed: () => setState(() => _isEditing = false)),
+              const Text('Edita tu información', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 48, bottom: 35),
+            child: Text('Actualiza tu foto de perfil, nombre y datos de contacto.', style: TextStyle(fontSize: 14, color: Colors.grey)),
+          ),
+          
+          _buildTextField(controller: _nameController, labelText: 'Nombre completo'),
+          _buildTextField(controller: _emailController, labelText: 'Correo electrónico'),
+          _buildTextField(controller: _phoneController, labelText: 'Teléfono'),
+          
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: DropdownButtonFormField<String>(
+              value: _selectedGender,
+              decoration: InputDecoration(labelText: 'Sexo', border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
+              items: <String>['Masculino', 'Femenino', 'Otro'].map((String value) {
+                return DropdownMenuItem<String>(value: value, child: Text(value));
+              }).toList(),
+              onChanged: (newValue) => setState(() => _selectedGender = newValue ?? 'Otro'),
             ),
           ),
+          
+          _buildTextField(
+            controller: _birthdayController, 
+            labelText: 'Fecha de nacimiento',
+            suffixIcon: Icons.calendar_today,
+            onSuffixTap: () async {
+              DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: DateTime(1995, 1, 1),
+                firstDate: DateTime(1930),
+                lastDate: DateTime.now(),
+              );
+              if (pickedDate != null) {
+                setState(() {
+                  _birthdayController.text = "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
+                });
+              }
+            }
+          ),
+          
+          const SizedBox(height: 20),
+          
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _currentUserData['name'] = _nameController.text;
+                  _currentUserData['email'] = _emailController.text;
+                  _currentUserData['phone'] = _phoneController.text;
+                  _currentUserData['birthday'] = _birthdayController.text;
+                  _currentUserData['gender'] = _selectedGender;
+                  _isEditing = false;
+                });
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cambios guardados con éxito'), backgroundColor: Color(0xFF1B4332)),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2A6248),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+              child: const Text('Guardar cambios', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({required TextEditingController controller, required String labelText, IconData? suffixIcon, VoidCallback? onSuffixTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: labelText,
+          labelStyle: const TextStyle(color: Color(0xFF5A5A5A)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+          suffixIcon: suffixIcon != null ? IconButton(icon: Icon(suffixIcon, color: const Color(0xFF1B4332)), onPressed: onSuffixTap) : null,
         ),
       ),
+    );
+  }
+
+  void _showComingSoonSnackBar(String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Funcionalidad de "$feature" estará disponible próximamente.'), backgroundColor: const Color(0xFF1B4332)),
     );
   }
 }
