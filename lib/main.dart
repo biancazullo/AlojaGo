@@ -1,22 +1,31 @@
+// lib/main.dart
+// CAMBIOS vs original:
+// 1. _userRole guardado en estado global
+// 2. _openAccount devuelve el rol desde toProfileMap()
+// 3. Botón "Panel [Rol]" en AppBar cuando está logueado
+// 4. Rutas a TravelerDashboard / OperatorDashboard / AdminDashboard
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'data/repositories/auth_repository.dart';
+import 'domain/models/app_user.dart';
 import 'domain/models/listing.dart';
 import 'firebase_options.dart';
 import 'perfil.dart';
 import 'registrase.dart';
+import 'ui/features/admin/admin_dashboard.dart';
+import 'ui/features/operator/operator_dashboard.dart';
+import 'ui/features/traveler/traveler_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   runApp(const AlojaApp());
 }
 
 class AlojaApp extends StatefulWidget {
   const AlojaApp({super.key, this.authRepository});
-
   final AuthRepository? authRepository;
 
   @override
@@ -35,11 +44,9 @@ class _AlojaAppState extends State<AlojaApp> {
     _authRepository = widget.authRepository ?? FirebaseAuthRepository();
   }
 
-  void _toggleTheme() {
-    setState(() {
-      _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
-    });
-  }
+  void _toggleTheme() => setState(
+    () => _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +93,8 @@ const kSand = Color(0xFFD4A853);
 const kCream = Color(0xFFF8F4EC);
 const kTerracotta = Color(0xFFBF6B3D);
 
-String _imageProxy(String url) {
-  return 'https://images.weserv.nl/?url=${Uri.encodeComponent(url)}&w=900&fit=cover';
-}
+String _imageProxy(String url) =>
+    'https://images.weserv.nl/?url=${Uri.encodeComponent(url)}&w=900&fit=cover';
 
 final List<AlojaListing> _seedListings = [
   AlojaListing(
@@ -104,12 +110,12 @@ final List<AlojaListing> _seedListings = [
     ),
     tag: 'Oferta',
     rating: 4.8,
+    status: ListingStatus.active,
+    maxReservations: 10,
+    accommodationType: 'Apartamento',
+    category: 'Estándar',
     reviews: const [
-      ListingReview(
-        author: 'Mariana',
-        rating: 5,
-        comment: 'Muy buena ubicacion y check-in rapido.',
-      ),
+      ListingReview(author: 'Mariana', rating: 5, comment: 'Muy buena ubicacion y check-in rapido.'),
     ],
   ),
   AlojaListing(
@@ -120,17 +126,15 @@ final List<AlojaListing> _seedListings = [
     region: 'Dependencias Federales',
     nightlyPrice: 120,
     maxGuests: 4,
-    imageUrl: _imageProxy(
-      'https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg',
-    ),
+    imageUrl: _imageProxy('https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg'),
     tag: 'Popular',
     rating: 5,
+    status: ListingStatus.active,
+    maxReservations: 5,
+    accommodationType: 'Posada',
+    category: 'Premium',
     reviews: const [
-      ListingReview(
-        author: 'Carlos',
-        rating: 5,
-        comment: 'Vista excelente y anfitriones atentos.',
-      ),
+      ListingReview(author: 'Carlos', rating: 5, comment: 'Vista excelente y anfitriones atentos.'),
     ],
   ),
   AlojaListing(
@@ -141,17 +145,15 @@ final List<AlojaListing> _seedListings = [
     region: 'Estado Merida',
     nightlyPrice: 38,
     maxGuests: 5,
-    imageUrl: _imageProxy(
-      'https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg',
-    ),
+    imageUrl: _imageProxy('https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg'),
     tag: 'Nuevo',
     rating: 4.6,
+    status: ListingStatus.active,
+    maxReservations: 0,
+    accommodationType: 'Cabaña',
+    category: 'Estándar',
     reviews: const [
-      ListingReview(
-        author: 'Valeria',
-        rating: 4,
-        comment: 'Comoda para viajar en familia.',
-      ),
+      ListingReview(author: 'Valeria', rating: 4, comment: 'Comoda para viajar en familia.'),
     ],
   ),
   AlojaListing(
@@ -167,16 +169,17 @@ final List<AlojaListing> _seedListings = [
     ),
     tag: 'Descuento',
     rating: 4.9,
+    status: ListingStatus.active,
+    maxReservations: 8,
+    accommodationType: 'Hotel',
+    category: 'Lujo',
     reviews: const [
-      ListingReview(
-        author: 'Diego',
-        rating: 5,
-        comment: 'Ideal para una escapada de fin de semana.',
-      ),
+      ListingReview(author: 'Diego', rating: 5, comment: 'Ideal para una escapada de fin de semana.'),
     ],
   ),
 ];
 
+// ── HOME PAGE ──────────────────────────────────────────────────────────────
 class AlojaHomePage extends StatefulWidget {
   const AlojaHomePage({
     super.key,
@@ -201,6 +204,8 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
 
   late List<AlojaListing> _listings;
   int _selectedNav = 0;
+
+  // ── Estado de sesión ──
   bool _isLoggedIn = false;
   String _userId = '';
   String _userFullName = '';
@@ -208,6 +213,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
   String _userPhone = '';
   String _userGender = '';
   String _userBirthday = '';
+  UserRole _userRole = UserRole.traveler;
 
   String get _userFirstName {
     final name = _userFullName.trim();
@@ -219,7 +225,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
     final guests = int.tryParse(_guestsController.text.trim());
     return _listings
         .where(
-          (listing) => listing.matchesSearch(
+          (l) => l.matchesSearch(
             destination: _destinationController.text,
             maxPrice: maxPrice,
             guests: guests,
@@ -228,9 +234,8 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
         .toList();
   }
 
-  List<AlojaListing> get _myListings {
-    return _listings.where((listing) => listing.ownerId == _userId).toList();
-  }
+  List<AlojaListing> get _myListings =>
+      _listings.where((l) => l.ownerId == _userId).toList();
 
   @override
   void initState() {
@@ -247,6 +252,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
     super.dispose();
   }
 
+  // ── Login / Registro ───────────────────────────────────────────────────
   Future<void> _openAccount() async {
     if (_isLoggedIn) {
       final result = await Navigator.of(context).push<Map<String, String>>(
@@ -260,12 +266,12 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
               'phone': _userPhone,
               'gender': _userGender,
               'birthday': _userBirthday,
+              'role': _userRole.name,
             },
           ),
         ),
       );
       if (!mounted || result == null) return;
-
       if (result['action'] == 'logout') {
         setState(() {
           _isLoggedIn = false;
@@ -275,6 +281,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
           _userPhone = '';
           _userGender = '';
           _userBirthday = '';
+          _userRole = UserRole.traveler;
         });
         _showMessage('Sesion cerrada correctamente');
       } else {
@@ -298,6 +305,12 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
     );
     if (!mounted || result == null) return;
 
+    final roleStr = result['role'] ?? 'traveler';
+    final role = UserRole.values.firstWhere(
+      (r) => r.name == roleStr,
+      orElse: () => UserRole.traveler,
+    );
+
     setState(() {
       _isLoggedIn = true;
       _userId = result['id'] ?? '';
@@ -306,10 +319,119 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
       _userPhone = result['phone'] ?? '';
       _userGender = result['gender'] ?? '';
       _userBirthday = result['birthday'] ?? '';
+      _userRole = role;
     });
     _showMessage(
       'Bienvenido, ${_userFirstName.isEmpty ? 'usuario' : _userFirstName}',
     );
+  }
+
+  // ── Abrir panel según rol ─────────────────────────────────────────────
+  void _openRoleDashboard() {
+    if (!_isLoggedIn) return;
+    final currentUser = AppUser(
+      id: _userId,
+      name: _userFullName,
+      email: _userEmail,
+      phone: _userPhone,
+      gender: _userGender,
+      birthday: _userBirthday,
+      role: _userRole,
+    );
+
+    switch (_userRole) {
+      case UserRole.traveler:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TravelerDashboard(
+              user: currentUser,
+              listings: _listings,
+              onReserve: (listing, nights) async {
+                await _openPaymentFlow(listing, nights: nights);
+                return true;
+              },
+              onReview: (listing) => _openReviewDialog(listing),
+            ),
+          ),
+        );
+        break;
+
+      case UserRole.operator:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => OperatorDashboard(
+              user: currentUser,
+              allListings: _listings,
+              onSaveListing: (listing) {
+                setState(() {
+                  final idx =
+                      _listings.indexWhere((l) => l.id == listing.id);
+                  if (idx == -1) {
+                    _listings.insert(0, listing);
+                  } else {
+                    _listings[idx] = listing;
+                  }
+                });
+              },
+              onDeleteListing: (listing) {
+                setState(
+                  () => _listings.removeWhere((l) => l.id == listing.id),
+                );
+              },
+              onToggleStatus: _toggleListingStatus,
+            ),
+          ),
+        );
+        break;
+
+      case UserRole.admin:
+        // Lista simulada de usuarios para el admin
+        final mockUsers = [
+          currentUser,
+          const AppUser(
+            id: 'u2',
+            name: 'Ana Torres',
+            email: 'ana@correo.unimet.edu.ve',
+            role: UserRole.traveler,
+          ),
+          const AppUser(
+            id: 'u3',
+            name: 'Pedro López',
+            email: 'pedro@correo.unimet.edu.ve',
+            role: UserRole.operator,
+          ),
+        ];
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => AdminDashboard(
+              admin: currentUser,
+              allUsers: mockUsers,
+              allListings: _listings,
+              onUpdateUser: (_) {},
+              onSaveListing: (listing) {
+                setState(() {
+                  final idx =
+                      _listings.indexWhere((l) => l.id == listing.id);
+                  if (idx == -1) {
+                    _listings.insert(0, listing);
+                  } else {
+                    _listings[idx] = listing;
+                  }
+                });
+              },
+              onDeleteListing: (listing) {
+                setState(
+                  () => _listings.removeWhere((l) => l.id == listing.id),
+                );
+              },
+            ),
+          ),
+        );
+        break;
+
+      default:
+        break;
+    }
   }
 
   void _showMessage(String message) {
@@ -333,31 +455,27 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
   Future<void> _openListingForm({AlojaListing? listing}) async {
     if (!_isLoggedIn) {
       await _openAccount();
-      if (!mounted) return;
-      if (!_isLoggedIn) return;
+      if (!mounted || !_isLoggedIn) return;
     }
 
     final titleController = TextEditingController(text: listing?.title ?? '');
     final cityController = TextEditingController(text: listing?.city ?? '');
     final regionController = TextEditingController(text: listing?.region ?? '');
-    final priceController = TextEditingController(
-      text: listing?.nightlyPrice.toString() ?? '',
-    );
-    final guestsController = TextEditingController(
-      text: listing?.maxGuests.toString() ?? '',
-    );
-    final imageController = TextEditingController(
-      text: listing?.imageUrl ?? '',
-    );
+    final priceController =
+        TextEditingController(text: listing?.nightlyPrice.toString() ?? '');
+    final guestsController =
+        TextEditingController(text: listing?.maxGuests.toString() ?? '');
+    final imageController =
+        TextEditingController(text: listing?.imageUrl ?? '');
+    final maxResController =
+        TextEditingController(text: listing?.maxReservations.toString() ?? '0');
     final formKey = GlobalKey<FormState>();
 
     final saved = await showDialog<AlojaListing>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(
-            listing == null ? 'Nueva publicacion' : 'Editar publicacion',
-          ),
+          title: Text(listing == null ? 'Nueva publicacion' : 'Editar publicacion'),
           content: SizedBox(
             width: 520,
             child: Form(
@@ -380,6 +498,11 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                       keyboardType: TextInputType.number,
                     ),
                     _DialogField(
+                      controller: maxResController,
+                      label: 'Cantidad max. de reservas (0 = sin limite)',
+                      keyboardType: TextInputType.number,
+                    ),
+                    _DialogField(
                       controller: imageController,
                       label: 'URL de imagen',
                       validator: (_) => null,
@@ -397,9 +520,8 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
             FilledButton(
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
-                final nextListing = AlojaListing(
-                  id:
-                      listing?.id ??
+                final next = AlojaListing(
+                  id: listing?.id ??
                       'listing-${DateTime.now().microsecondsSinceEpoch}',
                   ownerId: _userId,
                   title: titleController.text.trim(),
@@ -413,9 +535,12 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                   tag: listing?.tag ?? 'Anfitrion',
                   rating: listing?.rating ?? 0,
                   reviews: listing?.reviews ?? const [],
-                  status: listing?.status ?? ListingStatus.active,
+                  status: listing?.status ?? ListingStatus.pendingApproval,
+                  maxReservations:
+                      int.tryParse(maxResController.text.trim()) ?? 0,
+                  currentReservations: listing?.currentReservations ?? 0,
                 );
-                Navigator.pop(context, nextListing);
+                Navigator.pop(context, next);
               },
               child: const Text('Guardar'),
             ),
@@ -424,12 +549,12 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
       },
     );
 
-    titleController.dispose();
-    cityController.dispose();
-    regionController.dispose();
-    priceController.dispose();
-    guestsController.dispose();
-    imageController.dispose();
+    for (final c in [
+      titleController, cityController, regionController,
+      priceController, guestsController, imageController, maxResController
+    ]) {
+      c.dispose();
+    }
 
     if (saved == null) return;
     setState(() {
@@ -458,14 +583,30 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
     _showMessage('Publicacion eliminada');
   }
 
-  Future<void> _openPayment(AlojaListing listing) async {
+  Future<void> _openPaymentFlow(AlojaListing listing, {int nights = 2}) async {
     if (!_isLoggedIn) {
       await _openAccount();
-      if (!mounted) return;
-      if (!_isLoggedIn) return;
+      if (!mounted || !_isLoggedIn) return;
+    }
+    await _openPayment(listing, initialNights: nights);
+  }
+
+  Future<void> _openPayment(
+    AlojaListing listing, {
+    int initialNights = 2,
+  }) async {
+    if (!_isLoggedIn) {
+      await _openAccount();
+      if (!mounted || !_isLoggedIn) return;
     }
 
-    final nightsController = TextEditingController(text: '2');
+    if (!listing.hasAvailability) {
+      _showMessage('No hay disponibilidad para este alojamiento');
+      return;
+    }
+
+    final nightsController =
+        TextEditingController(text: initialNights.toString());
     String method = 'Tarjeta';
     final paid = await showModalBottomSheet<bool>(
       context: context,
@@ -495,6 +636,11 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                   ),
                   const SizedBox(height: 8),
                   Text('${listing.title} - ${listing.priceLabel}'),
+                  if (listing.maxReservations > 0)
+                    Text(
+                      'Disponibilidad: ${listing.availableSlots} lugares restantes',
+                      style: const TextStyle(color: Colors.orange),
+                    ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: nightsController,
@@ -526,8 +672,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                         child: Text('Transferencia'),
                       ),
                     ],
-                    onChanged: (value) =>
-                        setSheetState(() => method = value ?? method),
+                    onChanged: (v) => setSheetState(() => method = v ?? method),
                   ),
                   const SizedBox(height: 16),
                   _PaymentSummary(total: total, method: method),
@@ -550,6 +695,17 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
     nightsController.dispose();
 
     if (paid != true) return;
+
+    // Incrementar contador de reservas
+    setState(() {
+      final idx = _listings.indexWhere((l) => l.id == listing.id);
+      if (idx != -1 && _listings[idx].maxReservations > 0) {
+        _listings[idx] = _listings[idx].copyWith(
+          currentReservations: _listings[idx].currentReservations + 1,
+        );
+      }
+    });
+
     _showMessage('Pago aprobado. Reserva creada.');
     await _openReviewDialog(listing);
   }
@@ -575,7 +731,8 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                       final value = index + 1;
                       return IconButton(
                         tooltip: '$value estrellas',
-                        onPressed: () => setDialogState(() => rating = value),
+                        onPressed: () =>
+                            setDialogState(() => rating = value),
                         icon: Icon(
                           value <= rating ? Icons.star : Icons.star_border,
                           color: kSand,
@@ -606,9 +763,8 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
                     Navigator.pop(
                       context,
                       ListingReview(
-                        author: _userFirstName.isEmpty
-                            ? 'Usuario'
-                            : _userFirstName,
+                        author:
+                            _userFirstName.isEmpty ? 'Usuario' : _userFirstName,
                         rating: rating,
                         comment: comment,
                       ),
@@ -645,8 +801,10 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
             isDarkMode: widget.isDarkMode,
             isLoggedIn: _isLoggedIn,
             userFirstName: _userFirstName,
+            userRole: _userRole,
             onToggleTheme: widget.onToggleTheme,
             onAccountTap: _openAccount,
+            onRoleDashboardTap: _openRoleDashboard,
             onNavTap: (index) => setState(() => _selectedNav = index),
           ),
           SliverToBoxAdapter(
@@ -671,7 +829,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
               itemCount: filteredListings.length,
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 360,
-                mainAxisExtent: 460,
+                mainAxisExtent: 480,
                 mainAxisSpacing: 18,
                 crossAxisSpacing: 18,
               ),
@@ -710,14 +868,17 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
   }
 }
 
+// ── APP BAR ────────────────────────────────────────────────────────────────
 class _AlojaAppBar extends StatelessWidget {
   const _AlojaAppBar({
     required this.selectedNav,
     required this.isDarkMode,
     required this.isLoggedIn,
     required this.userFirstName,
+    required this.userRole,
     required this.onToggleTheme,
     required this.onAccountTap,
+    required this.onRoleDashboardTap,
     required this.onNavTap,
   });
 
@@ -725,9 +886,33 @@ class _AlojaAppBar extends StatelessWidget {
   final bool isDarkMode;
   final bool isLoggedIn;
   final String userFirstName;
+  final UserRole userRole;
   final VoidCallback onToggleTheme;
   final VoidCallback onAccountTap;
+  final VoidCallback onRoleDashboardTap;
   final ValueChanged<int> onNavTap;
+
+  String get _roleLabel {
+    switch (userRole) {
+      case UserRole.admin:
+        return 'Admin';
+      case UserRole.operator:
+        return 'Operador';
+      default:
+        return 'Viajero';
+    }
+  }
+
+  IconData get _roleIcon {
+    switch (userRole) {
+      case UserRole.admin:
+        return Icons.admin_panel_settings;
+      case UserRole.operator:
+        return Icons.business;
+      default:
+        return Icons.backpack;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -773,6 +958,21 @@ class _AlojaAppBar extends StatelessWidget {
           icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
           tooltip: isDarkMode ? 'Modo claro' : 'Modo oscuro',
         ),
+        if (isLoggedIn) ...[
+          // Botón de panel según rol
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: OutlinedButton.icon(
+              onPressed: onRoleDashboardTap,
+              icon: Icon(_roleIcon, size: 16),
+              label: Text('Panel $_roleLabel'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kEmerald,
+                side: const BorderSide(color: kEmerald),
+              ),
+            ),
+          ),
+        ],
         Padding(
           padding: const EdgeInsets.only(right: 16),
           child: FilledButton.icon(
@@ -786,6 +986,7 @@ class _AlojaAppBar extends StatelessWidget {
   }
 }
 
+// ── HERO SECTION (sin cambios) ─────────────────────────────────────────────
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
     required this.destinationController,
@@ -845,14 +1046,12 @@ class _HeroSection extends StatelessWidget {
                 guestsController: guestsController,
                 onSearch: onSearch,
               );
-
               if (!isWide) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [intro, const SizedBox(height: 24), searchPanel],
                 );
               }
-
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1049,16 +1248,14 @@ class _ListingCard extends StatelessWidget {
                 child: Image.network(
                   listing.imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: kEmeraldMid,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: kEmeraldMid,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.image_not_supported,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -1070,6 +1267,17 @@ class _ListingCard extends StatelessWidget {
                   side: BorderSide.none,
                 ),
               ),
+              if (listing.maxReservations > 0 && !listing.hasAvailability)
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Chip(
+                    label: const Text('Agotado'),
+                    backgroundColor: Colors.red,
+                    labelStyle: const TextStyle(color: Colors.white),
+                    side: BorderSide.none,
+                  ),
+                ),
             ],
           ),
           Padding(
@@ -1106,6 +1314,15 @@ class _ListingCard extends StatelessWidget {
                       listing.priceLabel,
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
+                    if (listing.maxReservations > 0)
+                      _InlineMetric(
+                        icon: Icons.confirmation_num_outlined,
+                        value:
+                            '${listing.availableSlots} disp.',
+                        iconColor: listing.hasAvailability
+                            ? Colors.green
+                            : Colors.red,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -1124,9 +1341,11 @@ class _ListingCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: onReserve,
+                        onPressed: listing.hasAvailability ? onReserve : null,
                         icon: const Icon(Icons.credit_card),
-                        label: const Text('Reservar'),
+                        label: Text(
+                          listing.hasAvailability ? 'Reservar' : 'Agotado',
+                        ),
                       ),
                     ),
                     IconButton(
@@ -1181,12 +1400,7 @@ class _ListingCard extends StatelessWidget {
 }
 
 class _InlineMetric extends StatelessWidget {
-  const _InlineMetric({
-    required this.icon,
-    required this.value,
-    this.iconColor,
-  });
-
+  const _InlineMetric({required this.icon, required this.value, this.iconColor});
   final IconData icon;
   final String value;
   final Color? iconColor;
@@ -1240,9 +1454,10 @@ class _HostPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Gestiona tus publicaciones',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
               FilledButton.icon(
@@ -1277,17 +1492,14 @@ class _HostPanel extends StatelessWidget {
                     IconButton(
                       onPressed: () => onEdit(listing),
                       icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Editar',
                     ),
                     IconButton(
                       onPressed: () => onToggleStatus(listing),
                       icon: const Icon(Icons.pause_circle_outline),
-                      tooltip: 'Pausar o activar',
                     ),
                     IconButton(
                       onPressed: () => onDelete(listing),
                       icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Eliminar',
                     ),
                   ],
                 ),
@@ -1301,7 +1513,6 @@ class _HostPanel extends StatelessWidget {
 
 class _FeaturesBand extends StatelessWidget {
   const _FeaturesBand({required this.totalListings});
-
   final int totalListings;
 
   @override
@@ -1318,7 +1529,7 @@ class _FeaturesBand extends StatelessWidget {
         runSpacing: 18,
         children: [
           _Metric(value: '$totalListings', label: 'publicaciones'),
-          const _Metric(value: '3', label: 'filtros de busqueda'),
+          const _Metric(value: '3', label: 'roles de usuario'),
           const _Metric(value: '100%', label: 'pago simulado'),
           const _Metric(value: '5★', label: 'feedback y calificacion'),
         ],
@@ -1329,7 +1540,6 @@ class _FeaturesBand extends StatelessWidget {
 
 class _Metric extends StatelessWidget {
   const _Metric({required this.value, required this.label});
-
   final String value;
   final String label;
 
@@ -1357,7 +1567,6 @@ class _Metric extends StatelessWidget {
 
 class _PaymentSummary extends StatelessWidget {
   const _PaymentSummary({required this.total, required this.method});
-
   final int total;
   final String method;
 
@@ -1408,8 +1617,7 @@ class _DialogField extends StatelessWidget {
           labelText: label,
           border: const OutlineInputBorder(),
         ),
-        validator:
-            validator ??
+        validator: validator ??
             (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Campo requerido';

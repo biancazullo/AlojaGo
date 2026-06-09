@@ -1,3 +1,4 @@
+// lib/ui/features/auth/view_models/auth_view_model.dart
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
@@ -29,6 +30,7 @@ class AuthViewModel extends ChangeNotifier {
     required String phone,
     required String gender,
     required String birthday,
+    UserRole role = UserRole.traveler,  // ← NUEVO parámetro
   }) {
     return _run(
       () => _authRepository.register(
@@ -38,6 +40,7 @@ class AuthViewModel extends ChangeNotifier {
         phone: phone,
         gender: gender,
         birthday: birthday,
+        role: role,
       ),
     );
   }

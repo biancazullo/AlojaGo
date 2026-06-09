@@ -1,4 +1,7 @@
-enum UserRole { guest, traveler, host, admin }
+// lib/domain/models/app_user.dart
+// Roles: traveler (viajero), operator (operador turístico), admin (administrador)
+
+enum UserRole { guest, traveler, operator, admin }
 
 class AppUser {
   const AppUser({
@@ -20,6 +23,10 @@ class AppUser {
   final String birthday;
   final String profileImage;
   final UserRole role;
+
+  bool get isTraveler => role == UserRole.traveler;
+  bool get isOperator => role == UserRole.operator;
+  bool get isAdmin => role == UserRole.admin;
 
   String get firstName {
     final trimmedName = name.trim();
@@ -50,7 +57,7 @@ class AppUser {
       birthday: (profile['birthday'] ?? '').toString(),
       profileImage: (profile['profileImage'] ?? '').toString(),
       role: UserRole.values.firstWhere(
-        (role) => role.name == profile['role'],
+        (r) => r.name == profile['role'],
         orElse: () => UserRole.traveler,
       ),
     );

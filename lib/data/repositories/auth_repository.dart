@@ -1,3 +1,4 @@
+// lib/data/repositories/auth_repository.dart
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/errors/app_exception.dart';
@@ -14,6 +15,7 @@ abstract class AuthRepository {
     required String phone,
     required String gender,
     required String birthday,
+    required UserRole role,  // ← NUEVO
   });
   Future<AppUser> login({required String email, required String password});
   Future<AppUser?> currentUserProfile();
@@ -50,6 +52,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String phone,
     required String gender,
     required String birthday,
+    required UserRole role,
   }) async {
     try {
       final credentials = await _authService.createUser(
@@ -63,6 +66,7 @@ class FirebaseAuthRepository implements AuthRepository {
         phone: phone.trim(),
         gender: gender,
         birthday: birthday,
+        role: role,
       );
       await _userProfileService.createUser(user);
       return user;
