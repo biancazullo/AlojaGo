@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
-import 'registrase.dart';
-import 'perfil.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-import 'data/repositories/auth_repository.dart';
+import 'package:flutter/material.dart';
 
-void main() async {
+import 'data/repositories/auth_repository.dart';
+import 'domain/models/listing.dart';
+import 'firebase_options.dart';
+import 'perfil.dart';
+import 'registrase.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -27,6 +29,12 @@ class _AlojaAppState extends State<AlojaApp> {
 
   bool get _isDarkMode => _themeMode == ThemeMode.dark;
 
+  @override
+  void initState() {
+    super.initState();
+    _authRepository = widget.authRepository ?? FirebaseAuthRepository();
+  }
+
   void _toggleTheme() {
     setState(() {
       _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
@@ -34,26 +42,24 @@ class _AlojaAppState extends State<AlojaApp> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _authRepository = widget.authRepository ?? FirebaseAuthRepository();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ALOJA',
       debugShowCheckedModeBanner: false,
+      themeMode: _themeMode,
       theme: ThemeData(
-        fontFamily: 'Georgia',
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2D6A4F)),
+        colorScheme: ColorScheme.fromSeed(seedColor: kEmerald),
         useMaterial3: true,
         scaffoldBackgroundColor: kCream,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: kCream,
+          foregroundColor: kEmerald,
+          elevation: 0,
+        ),
       ),
       darkTheme: ThemeData(
-        fontFamily: 'Georgia',
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D6A4F),
+          seedColor: kEmeraldLight,
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -64,7 +70,6 @@ class _AlojaAppState extends State<AlojaApp> {
           elevation: 0,
         ),
       ),
-      themeMode: _themeMode,
       home: AlojaHomePage(
         isDarkMode: _isDarkMode,
         onToggleTheme: _toggleTheme,
@@ -74,104 +79,105 @@ class _AlojaAppState extends State<AlojaApp> {
   }
 }
 
-// ─── Color Palette ───────────────────────────────────────────────────────────
 const kEmerald = Color(0xFF1B4332);
 const kEmeraldMid = Color(0xFF2D6A4F);
 const kEmeraldLight = Color(0xFF52B788);
 const kSand = Color(0xFFD4A853);
-const kSandLight = Color(0xFFF0D080);
 const kCream = Color(0xFFF8F4EC);
-const kCreamDark = Color(0xFFEDE8DA);
 const kTerracotta = Color(0xFFBF6B3D);
-const kWhite = Color(0xFFFFFFFF);
 
-bool _isDarkTheme(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark;
-Color _cardBackground(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF192530)
-    : kWhite.withValues(alpha: 0.97);
-Color _panelBackground(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF15212A)
-    : kCream.withValues(alpha: 0.92);
-Color _dividerColor(BuildContext context) =>
-    _isDarkTheme(context) ? const Color(0xFF2D3B47) : kCreamDark;
-Color _textPrimary(BuildContext context) =>
-    _isDarkTheme(context) ? Colors.white : kEmerald;
-Color _textSecondary(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFFB8CAD4)
-    : kEmeraldMid.withValues(alpha: 0.7);
-Color _hintColor(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFFA4B7C2)
-    : kEmeraldMid.withValues(alpha: 0.5);
-Color _searchFieldBackground(BuildContext context) =>
-    _isDarkTheme(context) ? const Color(0xFF12212A) : kCream;
-Color _searchFieldBorder(BuildContext context) =>
-    _isDarkTheme(context) ? const Color(0xFF2D3B47) : kCreamDark;
-Color _accentText(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF71E9CC)
-    : const Color.fromARGB(255, 83, 212, 180);
-Color _cardShadowColor(BuildContext context) => _isDarkTheme(context)
-    ? Colors.black.withValues(alpha: 0.35)
-    : kEmerald.withValues(alpha: 0.18);
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-String _getWebSafeUrl(String originalUrl) {
-  return 'https://images.weserv.nl/?url=${Uri.encodeComponent(originalUrl)}&w=800&fit=cover';
+String _imageProxy(String url) {
+  return 'https://images.weserv.nl/?url=${Uri.encodeComponent(url)}&w=900&fit=cover';
 }
 
-final List<Map<String, dynamic>> kDestinations = [
-  {
-    'city': 'Caracas',
-    'region': 'Distrito Capital',
-    'price': '\$45/noche',
-    'rating': 4.8,
-    'tag': 'Oferta',
-    'gradient': [Color(0xFF1B4332), Color(0xFF2D6A4F)],
-    'image': _getWebSafeUrl(
+final List<AlojaListing> _seedListings = [
+  AlojaListing(
+    id: 'caracas-altamira',
+    ownerId: 'host-1',
+    title: 'Apartamento ejecutivo en Altamira',
+    city: 'Caracas',
+    region: 'Distrito Capital',
+    nightlyPrice: 45,
+    maxGuests: 3,
+    imageUrl: _imageProxy(
       'https://www.huelvainformacion.es/2023/06/20/huelva/Explora-capital-Venezuela-Caracas_1804029652_187279712_1200x675.jpg',
     ),
-  },
-  {
-    'city': 'Los Roques',
-    'region': 'Dependencias Federales',
-    'price': '\$120/noche',
-    'rating': 5.0,
-    'tag': 'Popular',
-    'gradient': [Color(0xFF0077B6), Color(0xFF00B4D8)],
-    'image': _getWebSafeUrl(
+    tag: 'Oferta',
+    rating: 4.8,
+    reviews: const [
+      ListingReview(
+        author: 'Mariana',
+        rating: 5,
+        comment: 'Muy buena ubicacion y check-in rapido.',
+      ),
+    ],
+  ),
+  AlojaListing(
+    id: 'posada-roques',
+    ownerId: 'host-2',
+    title: 'Posada frente al mar',
+    city: 'Los Roques',
+    region: 'Dependencias Federales',
+    nightlyPrice: 120,
+    maxGuests: 4,
+    imageUrl: _imageProxy(
       'https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg',
     ),
-  },
-  {
-    'city': 'Mérida',
-    'region': 'Estado Mérida',
-    'price': '\$38/noche',
-    'rating': 4.6,
-    'tag': 'Nuevo',
-    'gradient': [Color(0xFF6B4226), Color(0xFFBF6B3D)],
-    'image': _getWebSafeUrl(
+    tag: 'Popular',
+    rating: 5,
+    reviews: const [
+      ListingReview(
+        author: 'Carlos',
+        rating: 5,
+        comment: 'Vista excelente y anfitriones atentos.',
+      ),
+    ],
+  ),
+  AlojaListing(
+    id: 'cabana-merida',
+    ownerId: 'host-3',
+    title: 'Cabana andina familiar',
+    city: 'Merida',
+    region: 'Estado Merida',
+    nightlyPrice: 38,
+    maxGuests: 5,
+    imageUrl: _imageProxy(
       'https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg',
     ),
-  },
-  {
-    'city': 'Margarita',
-    'region': 'Nueva Esparta',
-    'price': '\$75/noche',
-    'rating': 4.9,
-    'tag': 'Descuento',
-    'gradient': [Color(0xFF7B3F00), Color(0xFFD4A853)],
-    'image': _getWebSafeUrl(
+    tag: 'Nuevo',
+    rating: 4.6,
+    reviews: const [
+      ListingReview(
+        author: 'Valeria',
+        rating: 4,
+        comment: 'Comoda para viajar en familia.',
+      ),
+    ],
+  ),
+  AlojaListing(
+    id: 'margarita-playa',
+    ownerId: 'host-4',
+    title: 'Casa cerca de Playa El Agua',
+    city: 'Margarita',
+    region: 'Nueva Esparta',
+    nightlyPrice: 75,
+    maxGuests: 6,
+    imageUrl: _imageProxy(
       'https://tse1.mm.bing.net/th/id/OIP.iWG1J91ZFF-Aog4Nj_jOAgHaEf?rs=1&pid=ImgDetMain&o=7&rm=3',
     ),
-  },
+    tag: 'Descuento',
+    rating: 4.9,
+    reviews: const [
+      ListingReview(
+        author: 'Diego',
+        rating: 5,
+        comment: 'Ideal para una escapada de fin de semana.',
+      ),
+    ],
+  ),
 ];
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 class AlojaHomePage extends StatefulWidget {
-  final bool isDarkMode;
-  final VoidCallback onToggleTheme;
-  final AuthRepository authRepository;
-
   const AlojaHomePage({
     super.key,
     required this.isDarkMode,
@@ -179,20 +185,22 @@ class AlojaHomePage extends StatefulWidget {
     required this.authRepository,
   });
 
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
+  final AuthRepository authRepository;
+
   @override
   State<AlojaHomePage> createState() => _AlojaHomePageState();
 }
 
-class _AlojaHomePageState extends State<AlojaHomePage>
-    with TickerProviderStateMixin {
-  late AnimationController _heroController;
-  late AnimationController _cardsController;
-  late Animation<double> _heroFade;
-  late Animation<Offset> _heroSlide;
-  late Animation<double> _cardsFade;
+class _AlojaHomePageState extends State<AlojaHomePage> {
+  final _destinationController = TextEditingController();
+  final _maxPriceController = TextEditingController();
+  final _guestsController = TextEditingController();
+  final _scrollController = ScrollController();
 
+  late List<AlojaListing> _listings;
   int _selectedNav = 0;
-  final List<String> _navItems = ['Inicio', 'Alojamientos', 'Conócenos'];
   bool _isLoggedIn = false;
   String _userId = '';
   String _userFullName = '';
@@ -206,36 +214,36 @@ class _AlojaHomePageState extends State<AlojaHomePage>
     return name.isEmpty ? '' : name.split(' ').first;
   }
 
+  List<AlojaListing> get _filteredListings {
+    final maxPrice = int.tryParse(_maxPriceController.text.trim());
+    final guests = int.tryParse(_guestsController.text.trim());
+    return _listings
+        .where(
+          (listing) => listing.matchesSearch(
+            destination: _destinationController.text,
+            maxPrice: maxPrice,
+            guests: guests,
+          ),
+        )
+        .toList();
+  }
+
+  List<AlojaListing> get _myListings {
+    return _listings.where((listing) => listing.ownerId == _userId).toList();
+  }
+
   @override
   void initState() {
     super.initState();
-    _heroController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _cardsController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-
-    _heroFade = CurvedAnimation(parent: _heroController, curve: Curves.easeOut);
-    _heroSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _heroController, curve: Curves.easeOut));
-
-    _cardsFade = CurvedAnimation(
-      parent: _cardsController,
-      curve: Curves.easeOut,
-    );
-
-    _heroController.forward().then((_) => _cardsController.forward());
+    _listings = [..._seedListings];
   }
 
   @override
   void dispose() {
-    _heroController.dispose();
-    _cardsController.dispose();
+    _destinationController.dispose();
+    _maxPriceController.dispose();
+    _guestsController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -256,38 +264,28 @@ class _AlojaHomePageState extends State<AlojaHomePage>
           ),
         ),
       );
-      if (!mounted) return;
+      if (!mounted || result == null) return;
 
-      if (result != null) {
-        // 1. Si el perfil devolvió la acción de cerrar sesión
-        if (result['action'] == 'logout') {
-          setState(() {
-            _isLoggedIn = false;
-            _userId = '';
-            _userFullName = '';
-            _userEmail = '';
-            _userPhone = '';
-            _userGender = '';
-            _userBirthday = '';
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sesión cerrada correctamente'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        } else {
-          // 2. Si solo editó sus datos, los actualizamos normalmente
-          setState(() {
-            _userFullName = result['name'] ?? _userFullName;
-            _userId = result['id'] ?? _userId;
-            _userEmail = result['email'] ?? _userEmail;
-            _userPhone = result['phone'] ?? _userPhone;
-            _userGender = result['gender'] ?? _userGender;
-            _userBirthday = result['birthday'] ?? _userBirthday;
-          });
-        }
+      if (result['action'] == 'logout') {
+        setState(() {
+          _isLoggedIn = false;
+          _userId = '';
+          _userFullName = '';
+          _userEmail = '';
+          _userPhone = '';
+          _userGender = '';
+          _userBirthday = '';
+        });
+        _showMessage('Sesion cerrada correctamente');
+      } else {
+        setState(() {
+          _userFullName = result['name'] ?? _userFullName;
+          _userId = result['id'] ?? _userId;
+          _userEmail = result['email'] ?? _userEmail;
+          _userPhone = result['phone'] ?? _userPhone;
+          _userGender = result['gender'] ?? _userGender;
+          _userBirthday = result['birthday'] ?? _userBirthday;
+        });
       }
       return;
     }
@@ -298,1196 +296,697 @@ class _AlojaHomePageState extends State<AlojaHomePage>
             RegisterPage(authRepository: widget.authRepository),
       ),
     );
-    if (!mounted) return;
+    if (!mounted || result == null) return;
 
-    if (result != null) {
-      setState(() {
-        _isLoggedIn = true;
-        _userId = result['id'] ?? '';
-        _userFullName = result['name'] ?? '';
-        _userEmail = result['email'] ?? '';
-        _userPhone = result['phone'] ?? '';
-        _userGender = result['gender'] ?? '';
-        _userBirthday = result['birthday'] ?? '';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Bienvenido, ${_userFirstName.isNotEmpty ? _userFirstName : 'usuario'}',
-          ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
+    setState(() {
+      _isLoggedIn = true;
+      _userId = result['id'] ?? '';
+      _userFullName = result['name'] ?? '';
+      _userEmail = result['email'] ?? '';
+      _userPhone = result['phone'] ?? '';
+      _userGender = result['gender'] ?? '';
+      _userBirthday = result['birthday'] ?? '';
+    });
+    _showMessage(
+      'Bienvenido, ${_userFirstName.isEmpty ? 'usuario' : _userFirstName}',
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+
+  void _runSearch() {
+    setState(() => _selectedNav = 1);
+    _scrollController.animateTo(
+      540,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Future<void> _openListingForm({AlojaListing? listing}) async {
+    if (!_isLoggedIn) {
+      await _openAccount();
+      if (!mounted) return;
+      if (!_isLoggedIn) return;
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWideAppBar = screenWidth > 900;
+    final titleController = TextEditingController(text: listing?.title ?? '');
+    final cityController = TextEditingController(text: listing?.city ?? '');
+    final regionController = TextEditingController(text: listing?.region ?? '');
+    final priceController = TextEditingController(
+      text: listing?.nightlyPrice.toString() ?? '',
+    );
+    final guestsController = TextEditingController(
+      text: listing?.maxGuests.toString() ?? '',
+    );
+    final imageController = TextEditingController(
+      text: listing?.imageUrl ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // ── Navigation Bar ──────────────────────────────────────────────────
-          SliverAppBar(
-            pinned: true,
-            backgroundColor:
-                Theme.of(context).appBarTheme.backgroundColor ??
-                Theme.of(context).scaffoldBackgroundColor,
-            elevation: 0,
-            toolbarHeight: 70,
-            titleSpacing: 0,
-            title: isWideAppBar
-                ? Row(
-                    children: [
-                      // 1. LOGO EN PANTALLAS GRANDES (Escritorio)
-                      const SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: _LogoImage(height: 70),
-                      ),
-                      // Centered navigation
-                      Expanded(
-                        child: Center(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ...List.generate(_navItems.length, (i) {
-                                  final selected = i == _selectedNav;
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _selectedNav = i),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: selected
-                                            ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(24),
-                                        border: Border.all(
-                                          color: selected
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.primary
-                                              : Colors.transparent,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        _navItems[i],
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: selected
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.onPrimary
-                                              : _textPrimary(context),
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Account button (right)
-                      GestureDetector(
-                        onTap: _openAccount,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _isLoggedIn
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.secondary,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isLoggedIn
-                                    ? Icons.verified_user
-                                    : Icons.person,
-                                color: kWhite,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _isLoggedIn
-                                    ? 'Hola, $_userFirstName'
-                                    : 'Mi Cuenta',
-                                style: const TextStyle(
-                                  color: kWhite,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                // 2. LOGO EN PANTALLAS PEQUEÑAS (Móvil)
-                : const SizedBox(width: 120, child: _LogoImage(height: 32)),
-            actions: [
-              IconButton(
-                onPressed: widget.onToggleTheme,
-                icon: Icon(
-                  widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                  color:
-                      Theme.of(context).iconTheme.color ??
-                      _textPrimary(context),
-                ),
-                tooltip: widget.isDarkMode ? 'Modo diurno' : 'Modo nocturno',
-              ),
-              if (!isWideAppBar)
-                PopupMenuButton<int>(
-                  icon: Icon(Icons.menu, color: _textPrimary(context)),
-                  onSelected: (index) => setState(() => _selectedNav = index),
-                  itemBuilder: (context) => List.generate(
-                    _navItems.length,
-                    (index) => PopupMenuItem<int>(
-                      value: index,
-                      child: Text(_navItems[index]),
-                    ),
-                  ),
-                ),
-              if (!isWideAppBar)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: IconButton(
-                    onPressed: _openAccount,
-                    icon: Icon(
-                      _isLoggedIn ? Icons.verified_user : Icons.person,
-                      color: _textPrimary(context),
-                    ),
-                    tooltip: _isLoggedIn ? 'Perfil' : 'Mi Cuenta',
-                  ),
-                ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Container(height: 1, color: _dividerColor(context)),
-            ),
+    final saved = await showDialog<AlojaListing>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            listing == null ? 'Nueva publicacion' : 'Editar publicacion',
           ),
-
-          // ── Hero Section ────────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _heroFade,
-              child: SlideTransition(
-                position: _heroSlide,
-                child: _HeroSection(),
-              ),
-            ),
-          ),
-
-          // ── Section Title ───────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _cardsFade,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 40, 28, 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+          content: SizedBox(
+            width: 520,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Destinos Destacados',
-                          style: TextStyle(
-                            fontFamily: 'Georgia',
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: _textPrimary(context),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Descubre Venezuela a precios accesibles',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _textSecondary(context),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
+                    _DialogField(controller: titleController, label: 'Titulo'),
+                    _DialogField(controller: cityController, label: 'Ciudad'),
+                    _DialogField(controller: regionController, label: 'Region'),
+                    _DialogField(
+                      controller: priceController,
+                      label: 'Precio por noche',
+                      keyboardType: TextInputType.number,
                     ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'Ver todos →',
-                        style: TextStyle(
-                          color: _accentText(context),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
+                    _DialogField(
+                      controller: guestsController,
+                      label: 'Huespedes maximos',
+                      keyboardType: TextInputType.number,
+                    ),
+                    _DialogField(
+                      controller: imageController,
+                      label: 'URL de imagen',
+                      validator: (_) => null,
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
-          // ── Destination Cards ───────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _cardsFade,
-              child: SizedBox(
-                height: 240,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
-                  itemCount: kDestinations.length,
-                  itemBuilder: (context, i) =>
-                      _DestinationCard(data: kDestinations[i], delay: i * 100),
-                ),
-              ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
             ),
-          ),
-
-          // ── Features Row ────────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: FadeTransition(opacity: _cardsFade, child: _FeaturesRow()),
-          ),
-
-          // ── CTA Banner ──────────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _cardsFade,
-              child: _CTABanner(
-                isLoggedIn:
-                    _isLoggedIn, // Le pasamos la variable que controla si está logueado
-                onTapRegister:
-                    _openAccount, // Le pasamos la función que abre el registro o perfil
-              ),
+            FilledButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                final nextListing = AlojaListing(
+                  id:
+                      listing?.id ??
+                      'listing-${DateTime.now().microsecondsSinceEpoch}',
+                  ownerId: _userId,
+                  title: titleController.text.trim(),
+                  city: cityController.text.trim(),
+                  region: regionController.text.trim(),
+                  nightlyPrice: int.parse(priceController.text.trim()),
+                  maxGuests: int.parse(guestsController.text.trim()),
+                  imageUrl: imageController.text.trim().isEmpty
+                      ? _seedListings.first.imageUrl
+                      : imageController.text.trim(),
+                  tag: listing?.tag ?? 'Anfitrion',
+                  rating: listing?.rating ?? 0,
+                  reviews: listing?.reviews ?? const [],
+                  status: listing?.status ?? ListingStatus.active,
+                );
+                Navigator.pop(context, nextListing);
+              },
+              child: const Text('Guardar'),
             ),
-          ),
-
-          // Footer space
-          const SliverToBoxAdapter(child: SizedBox(height: 48)),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Hero Section ─────────────────────────────────────────────────────────────
-class _HeroSection extends StatefulWidget {
-  @override
-  State<_HeroSection> createState() => _HeroSectionState();
-}
-
-class _LogoImage extends StatelessWidget {
-  const _LogoImage({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.network(
-      'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png',
-      height: height,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        return Text(
-          'ALOJA',
-          style: TextStyle(
-            fontFamily: 'Georgia',
-            fontSize: height > 40 ? 24 : 18,
-            fontWeight: FontWeight.bold,
-            color: _textPrimary(context),
-          ),
+          ],
         );
       },
     );
-  }
-}
 
-class _HeroSectionState extends State<_HeroSection>
-    with SingleTickerProviderStateMixin {
-  final TextEditingController _destinoCtrl = TextEditingController();
-  final TextEditingController _precioCtrl = TextEditingController();
-  final TextEditingController _fechaCtrl = TextEditingController();
-  final TextEditingController _huespedesCtrl = TextEditingController();
-  late AnimationController _shimmerController;
+    titleController.dispose();
+    cityController.dispose();
+    regionController.dispose();
+    priceController.dispose();
+    guestsController.dispose();
+    imageController.dispose();
 
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    _destinoCtrl.dispose();
-    _precioCtrl.dispose();
-    _fechaCtrl.dispose();
-    _huespedesCtrl.dispose();
-    super.dispose();
+    if (saved == null) return;
+    setState(() {
+      final index = _listings.indexWhere((item) => item.id == saved.id);
+      if (index == -1) {
+        _listings.insert(0, saved);
+      } else {
+        _listings[index] = saved;
+      }
+    });
+    _showMessage('Publicacion guardada');
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 700;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return SizedBox(
-          height: isWide ? 480 : 560,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Background gradient (simulating desert landscape)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isDark
-                        ? const [
-                            Color(0xFF0D161F),
-                            Color(0xFF14222E),
-                            Color(0xFF173445),
-                            Color(0xFF1F4F62),
-                          ]
-                        : const [
-                            Color.fromARGB(255, 245, 236, 213),
-                            Color.fromARGB(255, 188, 233, 236),
-                            Color.fromARGB(255, 186, 223, 238),
-                            Color.fromARGB(255, 160, 228, 245),
-                          ],
-                    stops: const [0.0, 0.35, 0.65, 1.0],
-                  ),
-                ),
+  void _toggleListingStatus(AlojaListing listing) {
+    setState(() {
+      final index = _listings.indexWhere((item) => item.id == listing.id);
+      final nextStatus = listing.status == ListingStatus.active
+          ? ListingStatus.paused
+          : ListingStatus.active;
+      _listings[index] = listing.copyWith(status: nextStatus);
+    });
+  }
+
+  void _deleteListing(AlojaListing listing) {
+    setState(() => _listings.removeWhere((item) => item.id == listing.id));
+    _showMessage('Publicacion eliminada');
+  }
+
+  Future<void> _openPayment(AlojaListing listing) async {
+    if (!_isLoggedIn) {
+      await _openAccount();
+      if (!mounted) return;
+      if (!_isLoggedIn) return;
+    }
+
+    final nightsController = TextEditingController(text: '2');
+    String method = 'Tarjeta';
+    final paid = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final nights = int.tryParse(nightsController.text) ?? 1;
+            final total = listing.nightlyPrice * nights.clamp(1, 60);
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                8,
+                24,
+                24 + MediaQuery.of(context).viewInsets.bottom,
               ),
-
-              // Organic sand-dune shapes
-              CustomPaint(painter: _DunePainter()),
-
-              // Left panel - brand
-              if (isWide)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: constraints.maxWidth * 0.38,
-                  child: Container(
-                    color: _panelBackground(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 48,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'ALOJA',
-                            style: TextStyle(
-                              fontFamily: 'Georgia',
-                              fontSize: 64,
-                              fontWeight: FontWeight.bold,
-                              color: _textPrimary(context),
-                              letterSpacing: 10,
-                              height: 1.0,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            height: 3,
-                            width: 48,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'Tu sitio web de reservas donde podrás descubrir cada rincón de Venezuela a precios accesibles.',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: _textSecondary(context),
-                              height: 1.65,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          _StatsBadge(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Right panel - search + card
-              Positioned(
-                left: isWide ? constraints.maxWidth * 0.38 : 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    isWide ? 24 : 16,
-                    isWide ? 28 : 16,
-                    isWide ? 24 : 16,
-                    isWide ? 28 : 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (!isWide) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'ALOJA',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Georgia',
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: kWhite,
-                            letterSpacing: 8,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      // Search card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _cardBackground(context),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _cardShadowColor(context),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _SearchField(
-                                    label: 'Destino',
-                                    hint: '¿A dónde vas?',
-                                    icon: Icons.location_on_outlined,
-                                    controller: _destinoCtrl,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _SearchField(
-                                    label: 'Precios',
-                                    hint: 'Presupuesto',
-                                    icon: Icons.attach_money,
-                                    controller: _precioCtrl,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _SearchField(
-                                    label: 'Fecha',
-                                    hint: 'dd/mm/aaaa',
-                                    icon: Icons.calendar_today_outlined,
-                                    controller: _fechaCtrl,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _SearchField(
-                                    label: 'Huéspedes',
-                                    hint: 'Cantidad de Personas',
-                                    icon: Icons.group_outlined,
-                                    controller: _huespedesCtrl,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _SearchButton(shimmer: _shimmerController),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Featured property card
-                      Expanded(child: _FeaturedCard()),
-
-                      // Scroll hint
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Desliza para ver',
-                              style: TextStyle(
-                                color: kWhite.withValues(alpha: 0.85),
-                                fontSize: 12,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Icon(
-                              Icons.keyboard_arrow_down,
-                              color: kWhite.withValues(alpha: 0.85),
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ─── Stats Badge ──────────────────────────────────────────────────────────────
-class _StatsBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _StatItem(value: '500+', label: 'Alojamientos'),
-        Container(
-          width: 1,
-          height: 32,
-          color: _dividerColor(context),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        _StatItem(value: '24', label: 'Estados'),
-        Container(
-          width: 1,
-          height: 32,
-          color: _dividerColor(context),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        _StatItem(value: '4.9★', label: 'Rating'),
-      ],
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: _textPrimary(context),
-            fontFamily: 'Georgia',
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: _textSecondary(context)),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Search Field ─────────────────────────────────────────────────────────────
-class _SearchField extends StatelessWidget {
-  final String label;
-  final String hint;
-  final IconData icon;
-  final TextEditingController controller;
-
-  const _SearchField({
-    required this.label,
-    required this.hint,
-    required this.icon,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: _textPrimary(context),
-            letterSpacing: 0.4,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: _searchFieldBackground(context),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _searchFieldBorder(context), width: 1.5),
-          ),
-          child: TextField(
-            controller: controller,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(fontSize: 11, color: _hintColor(context)),
-              prefixIcon: Icon(
-                icon,
-                size: 15,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 10,
-              ),
-              isDense: true,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Search Button ────────────────────────────────────────────────────────────
-class _SearchButton extends StatefulWidget {
-  final AnimationController shimmer;
-  const _SearchButton({required this.shimmer});
-
-  @override
-  State<_SearchButton> createState() => _SearchButtonState();
-}
-
-class _SearchButtonState extends State<_SearchButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedBuilder(
-        animation: widget.shimmer,
-        builder: (context, child) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: _hovered
-                    ? [
-                        Theme.of(context).colorScheme.secondary,
-                        Theme.of(context).colorScheme.primary,
-                      ]
-                    : [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.secondary,
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: _hovered ? 102 : 51),
-                  blurRadius: _hovered ? 16 : 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () {},
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.search,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Buscar Alojamientos',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ─── Featured Card ────────────────────────────────────────────────────────────
-class _FeaturedCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _cardBackground(context),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withValues(alpha: 0.35)
-                : Colors.black.withValues(alpha: 0.15),
-            blurRadius: 32,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. IMAGEN DE FONDO (Tu foto de El Ávila)
-          Image.network(
-            'https://t3.ftcdn.net/jpg/03/61/09/66/240_F_361096616_nuB4VJ10OZGOKxtMI1sbFgSndNj5nFYR.jpg',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF2D6A4F), Color(0xFFD4A853)],
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // 2. Capa de degradado inferior
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 100,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF0C161F).withValues(alpha: 242)
-                        : kWhite.withValues(alpha: 0.98),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 3. Text overlay (¡Ya limpiado sin el botón de arriba!)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                0,
-                16,
-                16,
-              ), // Aumenté un pelín el espacio inferior (de 12 a 16) para que respire mejor
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Alojamientos en Descuento',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: _textPrimary(context),
+                    'Confirmar reserva',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${listing.title} - ${listing.priceLabel}'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nightsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Noches',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setSheetState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    decoration: const InputDecoration(
+                      labelText: 'Metodo de pago',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Tarjeta',
+                        child: Text('Tarjeta'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Pago movil',
+                        child: Text('Pago movil'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Transferencia',
+                        child: Text('Transferencia'),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setSheetState(() => method = value ?? method),
+                  ),
+                  const SizedBox(height: 16),
+                  _PaymentSummary(total: total, method: method),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(context, true),
+                      icon: const Icon(Icons.lock_outline),
+                      label: Text('Pagar \$${total.toString()}'),
                     ),
                   ),
                 ],
               ),
+            );
+          },
+        );
+      },
+    );
+    nightsController.dispose();
+
+    if (paid != true) return;
+    _showMessage('Pago aprobado. Reserva creada.');
+    await _openReviewDialog(listing);
+  }
+
+  Future<void> _openReviewDialog(AlojaListing listing) async {
+    final commentController = TextEditingController();
+    int rating = 5;
+
+    final review = await showDialog<ListingReview>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Dejar comentario'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 4,
+                    children: List.generate(5, (index) {
+                      final value = index + 1;
+                      return IconButton(
+                        tooltip: '$value estrellas',
+                        onPressed: () => setDialogState(() => rating = value),
+                        icon: Icon(
+                          value <= rating ? Icons.star : Icons.star_border,
+                          color: kSand,
+                        ),
+                      );
+                    }),
+                  ),
+                  TextField(
+                    controller: commentController,
+                    minLines: 3,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Comentario',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Omitir'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final comment = commentController.text.trim();
+                    if (comment.isEmpty) return;
+                    Navigator.pop(
+                      context,
+                      ListingReview(
+                        author: _userFirstName.isEmpty
+                            ? 'Usuario'
+                            : _userFirstName,
+                        rating: rating,
+                        comment: comment,
+                      ),
+                    );
+                  },
+                  child: const Text('Publicar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    commentController.dispose();
+
+    if (review == null) return;
+    setState(() {
+      final index = _listings.indexWhere((item) => item.id == listing.id);
+      _listings[index] = _listings[index].addReview(review);
+    });
+    _showMessage('Comentario publicado');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredListings = _filteredListings;
+
+    return Scaffold(
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          _AlojaAppBar(
+            selectedNav: _selectedNav,
+            isDarkMode: widget.isDarkMode,
+            isLoggedIn: _isLoggedIn,
+            userFirstName: _userFirstName,
+            onToggleTheme: widget.onToggleTheme,
+            onAccountTap: _openAccount,
+            onNavTap: (index) => setState(() => _selectedNav = index),
+          ),
+          SliverToBoxAdapter(
+            child: _HeroSection(
+              destinationController: _destinationController,
+              maxPriceController: _maxPriceController,
+              guestsController: _guestsController,
+              onSearch: _runSearch,
             ),
           ),
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              title: 'Alojamientos disponibles',
+              subtitle: '${filteredListings.length} resultados filtrados',
+              actionLabel: 'Nueva publicacion',
+              onAction: () => _openListingForm(),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            sliver: SliverGrid.builder(
+              itemCount: filteredListings.length,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 360,
+                mainAxisExtent: 460,
+                mainAxisSpacing: 18,
+                crossAxisSpacing: 18,
+              ),
+              itemBuilder: (context, index) {
+                final listing = filteredListings[index];
+                return _ListingCard(
+                  listing: listing,
+                  isOwner: listing.ownerId == _userId,
+                  onReserve: () => _openPayment(listing),
+                  onReview: () => _openReviewDialog(listing),
+                  onEdit: () => _openListingForm(listing: listing),
+                  onToggleStatus: () => _toggleListingStatus(listing),
+                  onDelete: () => _deleteListing(listing),
+                );
+              },
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: _HostPanel(
+              isLoggedIn: _isLoggedIn,
+              listings: _myListings,
+              onCreate: () => _openListingForm(),
+              onLogin: _openAccount,
+              onEdit: (listing) => _openListingForm(listing: listing),
+              onToggleStatus: _toggleListingStatus,
+              onDelete: _deleteListing,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: _FeaturesBand(totalListings: _listings.length),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
     );
   }
 }
 
-// ─── Destination Card ─────────────────────────────────────────────────────────
-class _DestinationCard extends StatefulWidget {
-  final Map<String, dynamic> data;
-  final int delay;
+class _AlojaAppBar extends StatelessWidget {
+  const _AlojaAppBar({
+    required this.selectedNav,
+    required this.isDarkMode,
+    required this.isLoggedIn,
+    required this.userFirstName,
+    required this.onToggleTheme,
+    required this.onAccountTap,
+    required this.onNavTap,
+  });
 
-  const _DestinationCard({required this.data, required this.delay});
-
-  @override
-  State<_DestinationCard> createState() => _DestinationCardState();
-}
-
-class _DestinationCardState extends State<_DestinationCard>
-    with SingleTickerProviderStateMixin {
-  bool _hovered = false;
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scaleAnim = Tween<double>(
-      begin: 1.0,
-      end: 1.03,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final int selectedNav;
+  final bool isDarkMode;
+  final bool isLoggedIn;
+  final String userFirstName;
+  final VoidCallback onToggleTheme;
+  final VoidCallback onAccountTap;
+  final ValueChanged<int> onNavTap;
 
   @override
   Widget build(BuildContext context) {
-    final d = widget.data;
-    return MouseRegion(
-      onEnter: (_) {
-        setState(() => _hovered = true);
-        _controller.forward();
-      },
-      onExit: (_) {
-        setState(() => _hovered = false);
-        _controller.reverse();
-      },
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: 200,
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: List<Color>.from(d['gradient']),
-              ),
-              image: d['image'] != null
-                  ? DecorationImage(
-                      image:
-                          d['image'] is String &&
-                              (d['image'] as String).startsWith('http')
-                          ? NetworkImage(d['image'] as String)
-                          : AssetImage(d['image'] as String) as ImageProvider,
-                      fit: BoxFit.cover,
-                      colorFilter: ColorFilter.mode(
-                        kWhite.withValues(alpha: 56),
-                        BlendMode.dstATop,
-                      ),
-                    )
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: (d['gradient'][0] as Color).withValues(alpha: 0.4),
-                  blurRadius: _hovered ? 20 : 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Decorative circles
-                Positioned(
-                  right: -20,
-                  top: -20,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kWhite.withValues(alpha: 0.06),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 10,
-                  bottom: 60,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kWhite.withValues(alpha: 0.08),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Tag
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: kWhite.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          d['tag'] as String,
-                          style: const TextStyle(
-                            color: kWhite,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        d['city'] as String,
-                        style: const TextStyle(
-                          fontFamily: 'Georgia',
-                          color: kWhite,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        d['region'] as String,
-                        style: TextStyle(
-                          color: kWhite.withValues(alpha: 0.75),
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            d['price'] as String,
-                            style: const TextStyle(
-                              color: kWhite,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: kSandLight,
-                                size: 13,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${d['rating']}',
-                                style: const TextStyle(
-                                  color: kWhite,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    const navItems = ['Inicio', 'Busqueda', 'Publicaciones'];
+    return SliverAppBar(
+      pinned: true,
+      toolbarHeight: 72,
+      titleSpacing: 20,
+      title: Row(
+        children: [
+          const Text(
+            'ALOJA',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 4,
+              color: kEmerald,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Features Row ─────────────────────────────────────────────────────────────
-class _FeaturesRow extends StatelessWidget {
-  final List<Map<String, dynamic>> _features = const [
-    {
-      'icon': Icons.verified_outlined,
-      'title': 'Verificados',
-      'desc': 'Todos los alojamientos son revisados y aprobados',
-    },
-    {
-      'icon': Icons.support_agent,
-      'title': 'Soporte 24/7',
-      'desc': 'Atención al cliente disponible todo el día',
-    },
-    {
-      'icon': Icons.price_check,
-      'title': 'Mejor Precio',
-      'desc': 'Garantizamos las mejores tarifas disponibles',
-    },
-    {
-      'icon': Icons.cancel_outlined,
-      'title': 'Cancelación Gratis',
-      'desc': 'Cancela sin cargos hasta 24h antes',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(28, 32, 28, 0),
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: kEmerald,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: _features
-            .map(
-              (f) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: kWhite.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          f['icon'] as IconData,
-                          color: kSandLight,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        f['title'] as String,
-                        style: const TextStyle(
-                          color: kWhite,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        f['desc'] as String,
-                        style: TextStyle(
-                          color: kWhite.withValues(alpha: 0.65),
-                          fontSize: 11,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(navItems.length, (index) {
+                  final selected = selectedNav == index;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(navItems[index]),
+                      selected: selected,
+                      onSelected: (_) => onNavTap(index),
+                    ),
+                  );
+                }),
               ),
-            )
-            .toList(),
+            ),
+          ),
+        ],
       ),
+      actions: [
+        IconButton(
+          onPressed: onToggleTheme,
+          icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+          tooltip: isDarkMode ? 'Modo claro' : 'Modo oscuro',
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: FilledButton.icon(
+            onPressed: onAccountTap,
+            icon: Icon(isLoggedIn ? Icons.verified_user : Icons.person),
+            label: Text(isLoggedIn ? 'Hola, $userFirstName' : 'Mi cuenta'),
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ─── CTA Banner ───────────────────────────────────────────────────────────────
-class _CTABanner extends StatelessWidget {
-  final bool isLoggedIn; // Recibe si está logueado
-  final VoidCallback onTapRegister; // Recibe la función unificada _openAccount
+class _HeroSection extends StatelessWidget {
+  const _HeroSection({
+    required this.destinationController,
+    required this.maxPriceController,
+    required this.guestsController,
+    required this.onSearch,
+  });
 
-  const _CTABanner({required this.isLoggedIn, required this.onTapRegister});
+  final TextEditingController destinationController;
+  final TextEditingController maxPriceController;
+  final TextEditingController guestsController;
+  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
-    // Si ya inició sesión o se registró, NO dibuja nada en la pantalla
-    if (isLoggedIn) {
-      return const SizedBox.shrink(); // Widget invisible que ocupa cero espacio
-    }
-
     return Container(
-      margin: const EdgeInsets.fromLTRB(28, 28, 28, 0),
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFD4A853), Color(0xFFBF6B3D)],
+      constraints: const BoxConstraints(minHeight: 430),
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFEBF6F1), Color(0xFFFFF5DF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: kSand.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 780;
+              final intro = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Reservas y alojamientos en Venezuela',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: kEmerald,
+                      fontWeight: FontWeight.w900,
+                      height: 1.05,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Busca por destino, compara precios, paga tu reserva y deja feedback despues de tu estadia.',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: kEmeraldMid,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              );
+              final searchPanel = _SearchPanel(
+                destinationController: destinationController,
+                maxPriceController: maxPriceController,
+                guestsController: guestsController,
+                onSearch: onSearch,
+              );
+
+              if (!isWide) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [intro, const SizedBox(height: 24), searchPanel],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(flex: 5, child: intro),
+                  const SizedBox(width: 28),
+                  Expanded(flex: 4, child: searchPanel),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchPanel extends StatelessWidget {
+  const _SearchPanel({
+    required this.destinationController,
+    required this.maxPriceController,
+    required this.guestsController,
+    required this.onSearch,
+  });
+
+  final TextEditingController destinationController;
+  final TextEditingController maxPriceController;
+  final TextEditingController guestsController;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SearchInput(
+              controller: destinationController,
+              label: 'Destino',
+              icon: Icons.location_on_outlined,
+              hint: 'Caracas, Merida, Margarita...',
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _SearchInput(
+                    controller: maxPriceController,
+                    label: 'Precio max.',
+                    icon: Icons.attach_money,
+                    hint: '80',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SearchInput(
+                    controller: guestsController,
+                    label: 'Huespedes',
+                    icon: Icons.group_outlined,
+                    hint: '2',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onSearch,
+                icon: const Icon(Icons.search),
+                label: const Text('Buscar alojamientos'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchInput extends StatelessWidget {
+  const _SearchInput({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.hint,
+    this.keyboardType,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String hint;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => FocusScope.of(context).unfocus(),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
       child: Row(
         children: [
           Expanded(
@@ -1495,47 +994,184 @@ class _CTABanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '¿Listo para explorar\nVenezuela?',
-                  style: TextStyle(
-                    fontFamily: 'Georgia',
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: kWhite,
-                    height: 1.3,
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Regístrate y obtén 20% de descuento en tu primera reserva.',
-                  style: TextStyle(
-                    color: kWhite.withValues(alpha: 0.85),
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
+                Text(subtitle),
               ],
             ),
           ),
-          const SizedBox(width: 24),
-          ElevatedButton(
-            // Al hacer clic, ejecuta la acción centralizada de main.dart
-            onPressed: onTapRegister,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kWhite,
-              foregroundColor: kTerracotta,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          FilledButton.icon(
+            onPressed: onAction,
+            icon: const Icon(Icons.add_home_work_outlined),
+            label: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ListingCard extends StatelessWidget {
+  const _ListingCard({
+    required this.listing,
+    required this.isOwner,
+    required this.onReserve,
+    required this.onReview,
+    required this.onEdit,
+    required this.onToggleStatus,
+    required this.onDelete,
+  });
+
+  final AlojaListing listing;
+  final bool isOwner;
+  final VoidCallback onReserve;
+  final VoidCallback onReview;
+  final VoidCallback onEdit;
+  final VoidCallback onToggleStatus;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  listing.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: kEmeraldMid,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
               ),
-              elevation: 0,
-            ),
-            child: const Text(
-              'Registrarse',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                letterSpacing: 0.3,
+              Positioned(
+                left: 12,
+                top: 12,
+                child: Chip(
+                  label: Text(listing.tag),
+                  backgroundColor: Colors.white,
+                  side: BorderSide.none,
+                ),
               ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  listing.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text('${listing.city}, ${listing.region}'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _InlineMetric(
+                      icon: Icons.star,
+                      value: listing.rating.toStringAsFixed(1),
+                      iconColor: kSand,
+                    ),
+                    _InlineMetric(
+                      icon: Icons.group_outlined,
+                      value: listing.maxGuests.toString(),
+                    ),
+                    Text(
+                      listing.priceLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 44,
+                  child: listing.reviews.isEmpty
+                      ? const Text('Sin comentarios todavia')
+                      : Text(
+                          '"${listing.reviews.last.comment}"',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: onReserve,
+                        icon: const Icon(Icons.credit_card),
+                        label: const Text('Reservar'),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onReview,
+                      icon: const Icon(Icons.rate_review_outlined),
+                      tooltip: 'Comentar',
+                    ),
+                    if (isOwner)
+                      PopupMenuButton<String>(
+                        tooltip: 'Gestionar publicacion',
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'edit':
+                              onEdit();
+                              break;
+                            case 'status':
+                              onToggleStatus();
+                              break;
+                            case 'delete':
+                              onDelete();
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Editar'),
+                          ),
+                          PopupMenuItem(
+                            value: 'status',
+                            child: Text(
+                              listing.status == ListingStatus.active
+                                  ? 'Pausar'
+                                  : 'Activar',
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Eliminar'),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -1544,59 +1180,247 @@ class _CTABanner extends StatelessWidget {
   }
 }
 
-// ─── Custom Painters ──────────────────────────────────────────────────────────
-class _DunePainter extends CustomPainter {
+class _InlineMetric extends StatelessWidget {
+  const _InlineMetric({
+    required this.icon,
+    required this.value,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String value;
+  final Color? iconColor;
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..shader = LinearGradient(
-        colors: [
-          const Color(0xFFE8C97A).withValues(alpha: 0.4),
-          const Color(0xFFD4854A).withValues(alpha: 0.0),
-        ],
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final path = Path()
-      ..moveTo(size.width * 0.3, 0)
-      ..quadraticBezierTo(
-        size.width * 0.6,
-        size.height * 0.35,
-        size.width,
-        size.height * 0.2,
-      )
-      ..lineTo(size.width, 0)
-      ..close();
-
-    canvas.drawPath(path, paint);
-
-    final paint2 = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFFBF6B3D).withValues(alpha: 0.15);
-
-    final path2 = Path()
-      ..moveTo(0, size.height * 0.7)
-      ..quadraticBezierTo(
-        size.width * 0.4,
-        size.height * 0.5,
-        size.width * 0.7,
-        size.height * 0.8,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.85,
-        size.height * 0.9,
-        size.width,
-        size.height * 0.75,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    canvas.drawPath(path2, paint2);
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 3),
+        Text(value),
+      ],
+    );
   }
+}
+
+class _HostPanel extends StatelessWidget {
+  const _HostPanel({
+    required this.isLoggedIn,
+    required this.listings,
+    required this.onCreate,
+    required this.onLogin,
+    required this.onEdit,
+    required this.onToggleStatus,
+    required this.onDelete,
+  });
+
+  final bool isLoggedIn;
+  final List<AlojaListing> listings;
+  final VoidCallback onCreate;
+  final VoidCallback onLogin;
+  final ValueChanged<AlojaListing> onEdit;
+  final ValueChanged<AlojaListing> onToggleStatus;
+  final ValueChanged<AlojaListing> onDelete;
 
   @override
-  bool shouldRepaint(_) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Gestiona tus publicaciones',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: isLoggedIn ? onCreate : onLogin,
+                icon: Icon(isLoggedIn ? Icons.add : Icons.login),
+                label: Text(
+                  isLoggedIn ? 'Crear publicacion' : 'Iniciar registro',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!isLoggedIn)
+            const Text('Registrate para administrar alojamientos propios.')
+          else if (listings.isEmpty)
+            const Text('Aun no tienes publicaciones creadas.')
+          else
+            ...listings.map(
+              (listing) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  listing.status == ListingStatus.active
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                ),
+                title: Text(listing.title),
+                subtitle: Text(
+                  '${listing.status == ListingStatus.active ? 'Activa' : 'Pausada'} - ${listing.priceLabel}',
+                ),
+                trailing: Wrap(
+                  children: [
+                    IconButton(
+                      onPressed: () => onEdit(listing),
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Editar',
+                    ),
+                    IconButton(
+                      onPressed: () => onToggleStatus(listing),
+                      icon: const Icon(Icons.pause_circle_outline),
+                      tooltip: 'Pausar o activar',
+                    ),
+                    IconButton(
+                      onPressed: () => onDelete(listing),
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Eliminar',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturesBand extends StatelessWidget {
+  const _FeaturesBand({required this.totalListings});
+
+  final int totalListings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: kEmerald,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Wrap(
+        spacing: 28,
+        runSpacing: 18,
+        children: [
+          _Metric(value: '$totalListings', label: 'publicaciones'),
+          const _Metric(value: '3', label: 'filtros de busqueda'),
+          const _Metric(value: '100%', label: 'pago simulado'),
+          const _Metric(value: '5★', label: 'feedback y calificacion'),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(label, style: const TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentSummary extends StatelessWidget {
+  const _PaymentSummary({required this.total, required this.method});
+
+  final int total;
+  final String method;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.receipt_long_outlined),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Metodo: $method')),
+          Text(
+            'Total: \$$total',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogField extends StatelessWidget {
+  const _DialogField({
+    required this.controller,
+    required this.label,
+    this.keyboardType,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator:
+            validator ??
+            (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Campo requerido';
+              }
+              if (keyboardType == TextInputType.number &&
+                  int.tryParse(value.trim()) == null) {
+                return 'Ingresa un numero valido';
+              }
+              return null;
+            },
+      ),
+    );
+  }
 }

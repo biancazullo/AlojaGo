@@ -15,7 +15,8 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('Destinos Destacados'), findsOneWidget);
+    expect(find.text('Alojamientos disponibles'), findsOneWidget);
+    expect(find.text('Buscar alojamientos'), findsOneWidget);
     expect(find.byIcon(Icons.person), findsOneWidget);
   });
 }

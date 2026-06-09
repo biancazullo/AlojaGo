@@ -304,7 +304,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 35),
 
-          _buildCardInfoRow('Se unió:', birthday),
+          _buildCardInfoRow('Nacimiento:', birthday),
           _buildCardInfoRow('Teléfono:', phone),
           _buildCardInfoRow(
             'Contraseña:',
