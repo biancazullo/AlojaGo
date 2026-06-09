@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Paleta de colores exacta de Figma
 const Color kFigmaBg = Color(0xFFF4F3EB);      // Fondo crema claro de la pantalla
@@ -26,6 +28,41 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  Future<void> _signUp() async {
+  // 1. Validar formulario
+  if (!_formKey.currentState!.validate()) return;
+
+  try {
+    // 2. Registro en Auth
+    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    // 3. Guardar en Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+    .doc(userCredential.user!.uid) // El ID del documento es el UID del usuario
+    .set({
+      // Guardamos todo el objeto de perfil de una vez
+      'profile': {
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'gender': _selectedGender ?? '',
+        'birthday': _birthdayController.text.trim(),
+      },
+      'createdAt': FieldValue.serverTimestamp(), // Es útil tener esto
+    });
+
+    // 4. Si llegó hasta aquí, todo salió bien
+    print("¡Registro exitoso!");
+  } catch (e) {
+    // Si hay un error, aquí lo verás en la consola
+    print("Error al registrar: $e");
+  }
+}
+
 
   @override
   void dispose() {
@@ -331,7 +368,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              await _signUp();
                               if (_formKey.currentState?.validate() ?? false) {
                                 final profileData = {
                                   'name': _nameController.text.trim(),

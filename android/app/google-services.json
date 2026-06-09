@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "946204607353",
+    "project_id": "alojago",
+    "storage_bucket": "alojago.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:946204607353:android:ba5ee9335eeb2b8a0125a8",
+        "android_client_info": {
+          "package_name": "com.example.proyec"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3u-4wzY4xxmE_6xDPR59-y_mg8V6G0RE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

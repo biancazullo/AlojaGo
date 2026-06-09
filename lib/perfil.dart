@@ -2,6 +2,8 @@ import 'dart:convert'; // Para convertir la imagen a texto (Base64)
 import 'dart:typed_data'; // Para manejar los bytes de la imagen en Web
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Selector de imágenes
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, String> userData;
@@ -341,13 +343,33 @@ class _ProfilePageState extends State<ProfilePage> {
             }
           ),
           
-          const SizedBox(height: 20),
-          
+        
           SizedBox(
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+
+                try {
+        // 1. Obtener el ID del usuario actual
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user == null) throw Exception("No hay usuario logueado");
+
+        // 2. Crear el mapa con los nuevos datos
+        Map<String, dynamic> updatedData = {
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'phone': _phoneController.text,
+          'birthday': _birthdayController.text,
+          'gender': _selectedGender,
+          // Solo guardamos la imagen si el usuario cambió la original
+          if (_profileImageBytes != null) 'profileImage': base64Encode(_profileImageBytes!),
+        };
+
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+  'profile': updatedData, // Esto actualizará el mapa 'profile' en lugar de la raíz
+});
+                
                 setState(() {
                   _currentUserData['name'] = _nameController.text;
                   _currentUserData['email'] = _emailController.text;
@@ -360,7 +382,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Cambios guardados con éxito'), backgroundColor: Color(0xFF1B4332)),
                 );
-              },
+              } catch (e) {
+        // Feedback de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+        );
+              }
+            
+  },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2A6248),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
