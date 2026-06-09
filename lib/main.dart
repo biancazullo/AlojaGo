@@ -102,7 +102,11 @@ Color _cardShadowColor(BuildContext context) => _isDarkTheme(context)
     : kEmerald.withValues(alpha: 0.18);
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const List<Map<String, dynamic>> kDestinations = [
+String _getWebSafeUrl(String originalUrl) {
+  return 'https://images.weserv.nl/?url=${Uri.encodeComponent(originalUrl)}&w=800&fit=cover';
+}
+
+final List<Map<String, dynamic>> kDestinations = [
   {
     'city': 'Caracas',
     'region': 'Distrito Capital',
@@ -110,7 +114,7 @@ const List<Map<String, dynamic>> kDestinations = [
     'rating': 4.8,
     'tag': 'Oferta',
     'gradient': [Color(0xFF1B4332), Color(0xFF2D6A4F)],
-    'image': 'https://images.unsplash.com/photo-1536896422419-85c5dfdfb005?auto=format&fit=crop&w=800&q=80',
+    'image': _getWebSafeUrl('https://www.huelvainformacion.es/2023/06/20/huelva/Explora-capital-Venezuela-Caracas_1804029652_187279712_1200x675.jpg'),
   },
   {
     'city': 'Los Roques',
@@ -119,7 +123,7 @@ const List<Map<String, dynamic>> kDestinations = [
     'rating': 5.0,
     'tag': 'Popular',
     'gradient': [Color(0xFF0077B6), Color(0xFF00B4D8)],
-    'image': 'https://images.unsplash.com/photo-1529994955569-1832921f883d?auto=format&fit=crop&w=800&q=80',
+    'image': _getWebSafeUrl('https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg'),
   },
   {
     'city': 'Mérida',
@@ -128,7 +132,7 @@ const List<Map<String, dynamic>> kDestinations = [
     'rating': 4.6,
     'tag': 'Nuevo',
     'gradient': [Color(0xFF6B4226), Color(0xFFBF6B3D)],
-    'image': 'https://images.unsplash.com/photo-1500538577571-5f0451c65deb?auto=format&fit=crop&w=800&q=80',
+    'image': _getWebSafeUrl('https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg'),
   },
   {
     'city': 'Margarita',
@@ -137,7 +141,7 @@ const List<Map<String, dynamic>> kDestinations = [
     'rating': 4.9,
     'tag': 'Descuento',
     'gradient': [Color(0xFF7B3F00), Color(0xFFD4A853)],
-    'image': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+    'image': _getWebSafeUrl('https://tse1.mm.bing.net/th/id/OIP.iWG1J91ZFF-Aog4Nj_jOAgHaEf?rs=1&pid=ImgDetMain&o=7&rm=3'),
   },
 ];
 
@@ -212,7 +216,7 @@ class _AlojaHomePageState extends State<AlojaHomePage>
       final result = await Navigator.of(context).push<Map<String, String>>(
         MaterialPageRoute(
           builder: (context) => ProfilePage(
-            profile: {
+            userData: {
               'name': _userFullName,
               'email': _userEmail,
               'phone': _userPhone,
@@ -223,21 +227,34 @@ class _AlojaHomePageState extends State<AlojaHomePage>
         ),
       );
 
-      if (result != null) {
-        setState(() {
-          _userFullName = result['name'] ?? _userFullName;
-          _userEmail = result['email'] ?? _userEmail;
-          _userPhone = result['phone'] ?? _userPhone;
-          _userGender = result['gender'] ?? _userGender;
-          _userBirthday = result['birthday'] ?? _userBirthday;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Perfil actualizado'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+if (result != null) {
+        // 1. Si el perfil devolvió la acción de cerrar sesión
+        if (result['action'] == 'logout') {
+          setState(() {
+            _isLoggedIn = false;
+            _userFullName = '';
+            _userEmail = '';
+            _userPhone = '';
+            _userGender = '';
+            _userBirthday = '';
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sesión cerrada correctamente'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        } else {
+          // 2. Si solo editó sus datos, los actualizamos normalmente
+          setState(() {
+            _userFullName = result['name'] ?? _userFullName;
+            _userEmail = result['email'] ?? _userEmail;
+            _userPhone = result['phone'] ?? _userPhone;
+            _userGender = result['gender'] ?? _userGender;
+            _userBirthday = result['birthday'] ?? _userBirthday;
+          });
+        }
       }
       return;
     }
@@ -273,26 +290,21 @@ class _AlojaHomePageState extends State<AlojaHomePage>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          // ── Navigation Bar ──────────────────────────────────────────────────
+         // ── Navigation Bar ──────────────────────────────────────────────────
           SliverAppBar(
             pinned: true,
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
-            toolbarHeight: 64,
-            titleSpacing: 16,
+            toolbarHeight: 70,
+            titleSpacing: 0,
             title: isWideAppBar
                 ? Row(
                     children: [
-                      // Logo (left)
-                      Text(
-                        'ALOJA',
-                        style: TextStyle(
-                          fontFamily: 'Georgia',
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: _textPrimary(context),
-                          letterSpacing: 6,
-                        ),
+                      // 1. LOGO EN PANTALLAS GRANDES (Escritorio)
+                      Image.network(
+                        'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', // <-- Coloca aquí el link de tu logo
+                        height: 70, // Altura ajustada para que no rompa la barra
+                        fit: BoxFit.contain,
                       ),
                       // Centered navigation
                       Expanded(
@@ -372,15 +384,11 @@ class _AlojaHomePageState extends State<AlojaHomePage>
                       ),
                     ],
                   )
-                : Text(
-                    'ALOJA',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: _textPrimary(context),
-                      letterSpacing: 6,
-                    ),
+                // 2. LOGO EN PANTALLAS PEQUEÑAS (Móvil)
+                : Image.network(
+                    'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', // <-- Coloca el mismo link de tu logo aquí
+                    height: 32, 
+                    fit: BoxFit.contain,
                   ),
             actions: [
               IconButton(
@@ -515,7 +523,10 @@ class _AlojaHomePageState extends State<AlojaHomePage>
           SliverToBoxAdapter(
             child: FadeTransition(
               opacity: _cardsFade,
-              child: _CTABanner(),
+              child: _CTABanner(
+                isLoggedIn: _isLoggedIn,       // Le pasamos la variable que controla si está logueado
+                onTapRegister: _openAccount,  // Le pasamos la función que abre el registro o perfil
+              ),
             ),
           ),
 
@@ -970,26 +981,14 @@ class _FeaturedCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Simulated mountain/city image via gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF4A7C59),
-                  Color(0xFF2D6A4F),
-                  Color(0xFF1B4332),
-                  Color(0xFF243B55),
-                ],
-              ),
-            ),
+          
+          // 1. IMAGEN DE FONDO (Tu foto de El Ávila)
+          Image.network(
+            'https://t3.ftcdn.net/jpg/03/61/09/66/240_F_361096616_nuB4VJ10OZGOKxtMI1sbFgSndNj5nFYR.jpg', 
+            fit: BoxFit.cover,
           ),
-          // Silhouette city skyline
-          CustomPaint(painter: _CitySkylinePainter()),
-          // Mountain silhouette
-          CustomPaint(painter: _MountainPainter()),
-          // Overlay gradient bottom
+
+          // 2. Capa de degradado inferior
           Positioned(
             bottom: 0,
             left: 0,
@@ -1010,37 +1009,17 @@ class _FeaturedCard extends StatelessWidget {
               ),
             ),
           ),
-          // Text overlay
+
+          // 3. Text overlay (¡Ya limpiado sin el botón de arriba!)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // Aumenté un pelín el espacio inferior (de 12 a 16) para que respire mejor
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: kSand.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: kSand.withValues(alpha: 0.5)),
-                    ),
-                    child: Text(
-                      'Ofertas disponibles',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.secondary,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Text(
                     'Alojamientos en Descuento',
                     style: TextStyle(
@@ -1340,8 +1319,21 @@ class _FeaturesRow extends StatelessWidget {
 
 // ─── CTA Banner ───────────────────────────────────────────────────────────────
 class _CTABanner extends StatelessWidget {
+  final bool isLoggedIn; // Recibe si está logueado
+  final VoidCallback onTapRegister; // Recibe la función unificada _openAccount
+
+  const _CTABanner({
+    required this.isLoggedIn,
+    required this.onTapRegister,
+  });
+
   @override
   Widget build(BuildContext context) {
+    // Si ya inició sesión o se registró, NO dibuja nada en la pantalla
+    if (isLoggedIn) {
+      return const SizedBox.shrink(); // Widget invisible que ocupa cero espacio
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(28, 28, 28, 0),
       padding: const EdgeInsets.all(32),
@@ -1390,13 +1382,8 @@ class _CTABanner extends StatelessWidget {
           ),
           const SizedBox(width: 24),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const RegisterPage(),
-                ),
-              );
-            },
+            // Al hacer clic, ejecuta la acción centralizada de main.dart
+            onPressed: onTapRegister, 
             style: ElevatedButton.styleFrom(
               backgroundColor: kWhite,
               foregroundColor: kTerracotta,
@@ -1531,7 +1518,7 @@ class _CitySkylinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = const Color(0xFF1B4332).withValues(alpha: 0.7);
+      ..color = const Color(0xFF1B4332).withOpacity(0.7);
 
     // Simple city blocks
     final buildings = [
