@@ -2,13 +2,16 @@ import 'dart:convert'; // Para convertir la imagen a texto (Base64)
 import 'dart:typed_data'; // Para manejar los bytes de la imagen en Web
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Selector de imágenes
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+import 'data/repositories/auth_repository.dart';
+import 'domain/models/app_user.dart';
+import 'ui/features/auth/view_models/auth_view_model.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, String> userData;
+  final AuthRepository? authRepository;
 
-  const ProfilePage({super.key, required this.userData});
+  const ProfilePage({super.key, required this.userData, this.authRepository});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -16,13 +19,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Map<String, String> _currentUserData;
-  
+
   // Controladores para el formulario de edición
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _birthdayController;
   String _selectedGender = 'Otro';
+  late final AuthViewModel _viewModel;
 
   // Variable para almacenar los bytes de la foto de perfil
   Uint8List? _profileImageBytes;
@@ -34,17 +38,34 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _currentUserData = Map<String, String>.from(widget.userData);
-    
-    _nameController = TextEditingController(text: _currentUserData['name'] ?? '');
-    _emailController = TextEditingController(text: _currentUserData['email'] ?? '');
-    _phoneController = TextEditingController(text: _currentUserData['phone'] ?? '');
-    _birthdayController = TextEditingController(text: _currentUserData['birthday'] ?? '01/01/1995');
+    _viewModel = AuthViewModel(
+      authRepository: widget.authRepository ?? FirebaseAuthRepository(),
+    );
+    _viewModel.addListener(_onViewModelChanged);
+
+    _nameController = TextEditingController(
+      text: _currentUserData['name'] ?? '',
+    );
+    _emailController = TextEditingController(
+      text: _currentUserData['email'] ?? '',
+    );
+    _phoneController = TextEditingController(
+      text: _currentUserData['phone'] ?? '',
+    );
+    _birthdayController = TextEditingController(
+      text: _currentUserData['birthday'] ?? '01/01/1995',
+    );
     _selectedGender = _currentUserData['gender'] ?? 'Otro';
 
     // Si ya existe una foto guardada, la decodificamos
-    if (_currentUserData['profileImage'] != null && _currentUserData['profileImage']!.isNotEmpty) {
+    if (_currentUserData['profileImage'] != null &&
+        _currentUserData['profileImage']!.isNotEmpty) {
       _profileImageBytes = base64Decode(_currentUserData['profileImage']!);
     }
+  }
+
+  void _onViewModelChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -53,6 +74,8 @@ class _ProfilePageState extends State<ProfilePage> {
     _emailController.dispose();
     _phoneController.dispose();
     _birthdayController.dispose();
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -63,7 +86,7 @@ class _ProfilePageState extends State<ProfilePage> {
       source: ImageSource.gallery,
       imageQuality: 70,
     );
-    
+
     if (image != null) {
       final Uint8List imageBytes = await image.readAsBytes();
       setState(() {
@@ -90,7 +113,11 @@ class _ProfilePageState extends State<ProfilePage> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(35),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
             ],
             border: Border.all(color: const Color(0xFFE2E6D7), width: 1),
           ),
@@ -99,7 +126,14 @@ class _ProfilePageState extends State<ProfilePage> {
               Icon(icon, size: 32, color: const Color(0xFF5A5A5A)),
               const SizedBox(width: 20),
               Expanded(
-                child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(0xFF5A5A5A))),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF5A5A5A),
+                  ),
+                ),
               ),
             ],
           ),
@@ -113,10 +147,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final bool isDesktop = MediaQuery.of(context).size.width > 950;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F2), 
+      backgroundColor: const Color(0xFFF4F7F2),
       appBar: AppBar(
         toolbarHeight: 85,
-        backgroundColor: const Color(0xFFE9EFE6), 
+        backgroundColor: const Color(0xFFE9EFE6),
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Padding(
@@ -124,17 +158,29 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Image.network('https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', height: 55, fit: BoxFit.contain),
+              Image.network(
+                'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png',
+                height: 55,
+                fit: BoxFit.contain,
+              ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(_currentUserData),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF1B4332),
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                 ),
-                child: const Text('Inicio', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Inicio',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -151,7 +197,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       SizedBox(width: 320, child: _buildUserCard()),
                       const SizedBox(width: 50),
-                      Expanded(child: _isEditing ? _buildEditForm() : _buildMenuOptions()),
+                      Expanded(
+                        child: _isEditing
+                            ? _buildEditForm()
+                            : _buildMenuOptions(),
+                      ),
                     ],
                   )
                 : Column(
@@ -180,7 +230,11 @@ class _ProfilePageState extends State<ProfilePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Column(
@@ -197,8 +251,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   shape: BoxShape.circle,
                 ),
                 child: _profileImageBytes != null
-                    ? ClipOval(child: Image.memory(_profileImageBytes!, fit: BoxFit.cover))
-                    : const Icon(Icons.person, size: 70, color: Color(0xFF656565)),
+                    ? ClipOval(
+                        child: Image.memory(
+                          _profileImageBytes!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 70,
+                        color: Color(0xFF656565),
+                      ),
               ),
               if (_isEditing) // SOLO muestra la cámara si estamos en la pantalla de editar
                 Positioned(
@@ -213,29 +276,63 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: Color(0xFF2A6248),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF222222))),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF222222),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(email, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(
+            email,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
           const SizedBox(height: 35),
-          
+
           _buildCardInfoRow('Se unió:', birthday),
           _buildCardInfoRow('Teléfono:', phone),
-          _buildCardInfoRow('Contraseña:', '*********', trailing: const Icon(Icons.visibility_off_outlined, size: 18, color: Colors.black54)),
+          _buildCardInfoRow(
+            'Contraseña:',
+            '*********',
+            trailing: const Icon(
+              Icons.visibility_off_outlined,
+              size: 18,
+              color: Colors.black54,
+            ),
+          ),
           _buildCardInfoRow('Sitios Reservados:', '0'),
-          
+
           const SizedBox(height: 40),
-          
+
           TextButton.icon(
-            onPressed: () => Navigator.of(context).pop({'action': 'logout'}),
+            onPressed: () async {
+              await _viewModel.logout();
+              if (mounted) Navigator.of(context).pop({'action': 'logout'});
+            },
             icon: const Icon(Icons.exit_to_app, color: Color(0xFFC84B22)),
-            label: const Text('Cerrar Sesión', style: TextStyle(color: Color(0xFFC84B22), fontWeight: FontWeight.bold, fontSize: 16)),
+            label: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(
+                color: Color(0xFFC84B22),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
           ),
         ],
       ),
@@ -248,9 +345,22 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text('$label ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black)),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87), overflow: TextOverflow.ellipsis)),
-          if (trailing != null) trailing,
+          Text(
+            '$label ',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Colors.black,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          ?trailing,
         ],
       ),
     );
@@ -260,7 +370,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text('Gestiona tu cuenta', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black)),
+        const Text(
+          'Gestiona tu cuenta',
+          style: TextStyle(
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
         const SizedBox(height: 35),
         _buildMenuButton(
           icon: Icons.settings,
@@ -270,15 +387,28 @@ class _ProfilePageState extends State<ProfilePage> {
               _nameController.text = _currentUserData['name'] ?? '';
               _emailController.text = _currentUserData['email'] ?? '';
               _phoneController.text = _currentUserData['phone'] ?? '';
-              _birthdayController.text = _currentUserData['birthday'] ?? '01/01/1995';
+              _birthdayController.text =
+                  _currentUserData['birthday'] ?? '01/01/1995';
               _selectedGender = _currentUserData['gender'] ?? 'Otro';
               _isEditing = true;
             });
           },
         ),
-        _buildMenuButton(icon: Icons.handyman_rounded, title: 'Administrar reservas y publicaciones', onTap: () => _showComingSoonSnackBar('Administración de reservas')),
-        _buildMenuButton(icon: Icons.support_agent_rounded, title: 'Contacto con el servicio técnico al cliente', onTap: () => _showComingSoonSnackBar('Servicio Técnico')),
-        _buildMenuButton(icon: Icons.engineering_rounded, title: 'Solicitar permiso para convertirse en administrador', onTap: () => _showComingSoonSnackBar('Solicitud de Administrator')),
+        _buildMenuButton(
+          icon: Icons.handyman_rounded,
+          title: 'Administrar reservas y publicaciones',
+          onTap: () => _showComingSoonSnackBar('Administración de reservas'),
+        ),
+        _buildMenuButton(
+          icon: Icons.support_agent_rounded,
+          title: 'Contacto con el servicio técnico al cliente',
+          onTap: () => _showComingSoonSnackBar('Servicio Técnico'),
+        ),
+        _buildMenuButton(
+          icon: Icons.engineering_rounded,
+          title: 'Solicitar permiso para convertirse en administrador',
+          onTap: () => _showComingSoonSnackBar('Solicitud de Administrator'),
+        ),
       ],
     );
   }
@@ -291,7 +421,11 @@ class _ProfilePageState extends State<ProfilePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Column(
@@ -299,33 +433,63 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF1B4332)), onPressed: () => setState(() => _isEditing = false)),
-              const Text('Edita tu información', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF1B4332)),
+                onPressed: () => setState(() => _isEditing = false),
+              ),
+              const Text(
+                'Edita tu información',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B4332),
+                ),
+              ),
             ],
           ),
           const Padding(
             padding: EdgeInsets.only(left: 48, bottom: 35),
-            child: Text('Actualiza tu foto de perfil, nombre y datos de contacto.', style: TextStyle(fontSize: 14, color: Colors.grey)),
+            child: Text(
+              'Actualiza tu foto de perfil, nombre y datos de contacto.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
           ),
-          
-          _buildTextField(controller: _nameController, labelText: 'Nombre completo'),
-          _buildTextField(controller: _emailController, labelText: 'Correo electrónico'),
+
+          _buildTextField(
+            controller: _nameController,
+            labelText: 'Nombre completo',
+          ),
+          _buildTextField(
+            controller: _emailController,
+            labelText: 'Correo electrónico',
+          ),
           _buildTextField(controller: _phoneController, labelText: 'Teléfono'),
-          
+
           Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: DropdownButtonFormField<String>(
-              value: _selectedGender,
-              decoration: InputDecoration(labelText: 'Sexo', border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
-              items: <String>['Masculino', 'Femenino', 'Otro'].map((String value) {
-                return DropdownMenuItem<String>(value: value, child: Text(value));
+              initialValue: _selectedGender,
+              decoration: InputDecoration(
+                labelText: 'Sexo',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              items: <String>['Masculino', 'Femenino', 'Otro'].map((
+                String value,
+              ) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
               }).toList(),
-              onChanged: (newValue) => setState(() => _selectedGender = newValue ?? 'Otro'),
+              onChanged: (newValue) =>
+                  setState(() => _selectedGender = newValue ?? 'Otro'),
             ),
           ),
-          
+
           _buildTextField(
-            controller: _birthdayController, 
+            controller: _birthdayController,
             labelText: 'Fecha de nacimiento',
             suffixIcon: Icons.calendar_today,
             onSuffixTap: () async {
@@ -337,64 +501,71 @@ class _ProfilePageState extends State<ProfilePage> {
               );
               if (pickedDate != null) {
                 setState(() {
-                  _birthdayController.text = "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
+                  _birthdayController.text =
+                      "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
                 });
               }
-            }
+            },
           ),
-          
-        
+
           SizedBox(
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
               onPressed: () async {
+                final updatedUser = AppUser(
+                  id: _currentUserData['id'] ?? '',
+                  name: _nameController.text.trim(),
+                  email: _emailController.text.trim(),
+                  phone: _phoneController.text.trim(),
+                  birthday: _birthdayController.text.trim(),
+                  gender: _selectedGender,
+                  profileImage: _profileImageBytes != null
+                      ? base64Encode(_profileImageBytes!)
+                      : (_currentUserData['profileImage'] ?? ''),
+                );
 
-                try {
-        // 1. Obtener el ID del usuario actual
-        User? user = FirebaseAuth.instance.currentUser;
-        if (user == null) throw Exception("No hay usuario logueado");
+                final savedUser = await _viewModel.updateProfile(updatedUser);
+                if (!mounted) return;
 
-        // 2. Crear el mapa con los nuevos datos
-        Map<String, dynamic> updatedData = {
-          'name': _nameController.text,
-          'email': _emailController.text,
-          'phone': _phoneController.text,
-          'birthday': _birthdayController.text,
-          'gender': _selectedGender,
-          // Solo guardamos la imagen si el usuario cambió la original
-          if (_profileImageBytes != null) 'profileImage': base64Encode(_profileImageBytes!),
-        };
+                if (savedUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _viewModel.errorMessage ?? 'Error al guardar',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
 
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-  'profile': updatedData, // Esto actualizará el mapa 'profile' en lugar de la raíz
-});
-                
                 setState(() {
-                  _currentUserData['name'] = _nameController.text;
-                  _currentUserData['email'] = _emailController.text;
-                  _currentUserData['phone'] = _phoneController.text;
-                  _currentUserData['birthday'] = _birthdayController.text;
-                  _currentUserData['gender'] = _selectedGender;
+                  _currentUserData = savedUser.toProfileMap();
                   _isEditing = false;
                 });
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Cambios guardados con éxito'), backgroundColor: Color(0xFF1B4332)),
+                  const SnackBar(
+                    content: Text('Cambios guardados con éxito'),
+                    backgroundColor: Color(0xFF1B4332),
+                  ),
                 );
-              } catch (e) {
-        // Feedback de error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
-        );
-              }
-            
-  },
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2A6248),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
-              child: const Text('Guardar cambios', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              child: const Text(
+                'Guardar cambios',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
@@ -402,7 +573,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String labelText, IconData? suffixIcon, VoidCallback? onSuffixTap}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    IconData? suffixIcon,
+    VoidCallback? onSuffixTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
@@ -411,7 +587,12 @@ class _ProfilePageState extends State<ProfilePage> {
           labelText: labelText,
           labelStyle: const TextStyle(color: Color(0xFF5A5A5A)),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-          suffixIcon: suffixIcon != null ? IconButton(icon: Icon(suffixIcon, color: const Color(0xFF1B4332)), onPressed: onSuffixTap) : null,
+          suffixIcon: suffixIcon != null
+              ? IconButton(
+                  icon: Icon(suffixIcon, color: const Color(0xFF1B4332)),
+                  onPressed: onSuffixTap,
+                )
+              : null,
         ),
       ),
     );
@@ -419,7 +600,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _showComingSoonSnackBar(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Funcionalidad de "$feature" estará disponible próximamente.'), backgroundColor: const Color(0xFF1B4332)),
+      SnackBar(
+        content: Text(
+          'Funcionalidad de "$feature" estará disponible próximamente.',
+        ),
+        backgroundColor: const Color(0xFF1B4332),
+      ),
     );
   }
 }

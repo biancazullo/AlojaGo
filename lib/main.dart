@@ -3,18 +3,19 @@ import 'registrase.dart';
 import 'perfil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'data/repositories/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const AlojaApp());
 }
 
 class AlojaApp extends StatefulWidget {
-  const AlojaApp({super.key});
+  const AlojaApp({super.key, this.authRepository});
+
+  final AuthRepository? authRepository;
 
   @override
   State<AlojaApp> createState() => _AlojaAppState();
@@ -22,6 +23,7 @@ class AlojaApp extends StatefulWidget {
 
 class _AlojaAppState extends State<AlojaApp> {
   ThemeMode _themeMode = ThemeMode.light;
+  late final AuthRepository _authRepository;
 
   bool get _isDarkMode => _themeMode == ThemeMode.dark;
 
@@ -29,6 +31,12 @@ class _AlojaAppState extends State<AlojaApp> {
     setState(() {
       _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepository = widget.authRepository ?? FirebaseAuthRepository();
   }
 
   @override
@@ -60,6 +68,7 @@ class _AlojaAppState extends State<AlojaApp> {
       home: AlojaHomePage(
         isDarkMode: _isDarkMode,
         onToggleTheme: _toggleTheme,
+        authRepository: _authRepository,
       ),
     );
   }
@@ -76,31 +85,28 @@ const kCreamDark = Color(0xFFEDE8DA);
 const kTerracotta = Color(0xFFBF6B3D);
 const kWhite = Color(0xFFFFFFFF);
 
-bool _isDarkTheme(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+bool _isDarkTheme(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark;
 Color _cardBackground(BuildContext context) => _isDarkTheme(context)
     ? const Color(0xFF192530)
     : kWhite.withValues(alpha: 0.97);
 Color _panelBackground(BuildContext context) => _isDarkTheme(context)
     ? const Color(0xFF15212A)
     : kCream.withValues(alpha: 0.92);
-Color _dividerColor(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF2D3B47)
-    : kCreamDark;
-Color _textPrimary(BuildContext context) => _isDarkTheme(context)
-    ? Colors.white
-    : kEmerald;
+Color _dividerColor(BuildContext context) =>
+    _isDarkTheme(context) ? const Color(0xFF2D3B47) : kCreamDark;
+Color _textPrimary(BuildContext context) =>
+    _isDarkTheme(context) ? Colors.white : kEmerald;
 Color _textSecondary(BuildContext context) => _isDarkTheme(context)
     ? const Color(0xFFB8CAD4)
     : kEmeraldMid.withValues(alpha: 0.7);
 Color _hintColor(BuildContext context) => _isDarkTheme(context)
     ? const Color(0xFFA4B7C2)
     : kEmeraldMid.withValues(alpha: 0.5);
-Color _searchFieldBackground(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF12212A)
-    : kCream;
-Color _searchFieldBorder(BuildContext context) => _isDarkTheme(context)
-    ? const Color(0xFF2D3B47)
-    : kCreamDark;
+Color _searchFieldBackground(BuildContext context) =>
+    _isDarkTheme(context) ? const Color(0xFF12212A) : kCream;
+Color _searchFieldBorder(BuildContext context) =>
+    _isDarkTheme(context) ? const Color(0xFF2D3B47) : kCreamDark;
 Color _accentText(BuildContext context) => _isDarkTheme(context)
     ? const Color(0xFF71E9CC)
     : const Color.fromARGB(255, 83, 212, 180);
@@ -121,7 +127,9 @@ final List<Map<String, dynamic>> kDestinations = [
     'rating': 4.8,
     'tag': 'Oferta',
     'gradient': [Color(0xFF1B4332), Color(0xFF2D6A4F)],
-    'image': _getWebSafeUrl('https://www.huelvainformacion.es/2023/06/20/huelva/Explora-capital-Venezuela-Caracas_1804029652_187279712_1200x675.jpg'),
+    'image': _getWebSafeUrl(
+      'https://www.huelvainformacion.es/2023/06/20/huelva/Explora-capital-Venezuela-Caracas_1804029652_187279712_1200x675.jpg',
+    ),
   },
   {
     'city': 'Los Roques',
@@ -130,7 +138,9 @@ final List<Map<String, dynamic>> kDestinations = [
     'rating': 5.0,
     'tag': 'Popular',
     'gradient': [Color(0xFF0077B6), Color(0xFF00B4D8)],
-    'image': _getWebSafeUrl('https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg'),
+    'image': _getWebSafeUrl(
+      'https://elsumario.com/wp-content/uploads/2024/02/Los-Roques-venezuela.jpg',
+    ),
   },
   {
     'city': 'Mérida',
@@ -139,7 +149,9 @@ final List<Map<String, dynamic>> kDestinations = [
     'rating': 4.6,
     'tag': 'Nuevo',
     'gradient': [Color(0xFF6B4226), Color(0xFFBF6B3D)],
-    'image': _getWebSafeUrl('https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg'),
+    'image': _getWebSafeUrl(
+      'https://i.pinimg.com/originals/e2/c7/af/e2c7afc7725c339858c2347965c5e851.jpg',
+    ),
   },
   {
     'city': 'Margarita',
@@ -148,7 +160,9 @@ final List<Map<String, dynamic>> kDestinations = [
     'rating': 4.9,
     'tag': 'Descuento',
     'gradient': [Color(0xFF7B3F00), Color(0xFFD4A853)],
-    'image': _getWebSafeUrl('https://tse1.mm.bing.net/th/id/OIP.iWG1J91ZFF-Aog4Nj_jOAgHaEf?rs=1&pid=ImgDetMain&o=7&rm=3'),
+    'image': _getWebSafeUrl(
+      'https://tse1.mm.bing.net/th/id/OIP.iWG1J91ZFF-Aog4Nj_jOAgHaEf?rs=1&pid=ImgDetMain&o=7&rm=3',
+    ),
   },
 ];
 
@@ -156,8 +170,14 @@ final List<Map<String, dynamic>> kDestinations = [
 class AlojaHomePage extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
+  final AuthRepository authRepository;
 
-  const AlojaHomePage({super.key, required this.isDarkMode, required this.onToggleTheme});
+  const AlojaHomePage({
+    super.key,
+    required this.isDarkMode,
+    required this.onToggleTheme,
+    required this.authRepository,
+  });
 
   @override
   State<AlojaHomePage> createState() => _AlojaHomePageState();
@@ -174,6 +194,7 @@ class _AlojaHomePageState extends State<AlojaHomePage>
   int _selectedNav = 0;
   final List<String> _navItems = ['Inicio', 'Alojamientos', 'Conócenos'];
   bool _isLoggedIn = false;
+  String _userId = '';
   String _userFullName = '';
   String _userEmail = '';
   String _userPhone = '';
@@ -223,7 +244,9 @@ class _AlojaHomePageState extends State<AlojaHomePage>
       final result = await Navigator.of(context).push<Map<String, String>>(
         MaterialPageRoute(
           builder: (context) => ProfilePage(
+            authRepository: widget.authRepository,
             userData: {
+              'id': _userId,
               'name': _userFullName,
               'email': _userEmail,
               'phone': _userPhone,
@@ -233,19 +256,21 @@ class _AlojaHomePageState extends State<AlojaHomePage>
           ),
         ),
       );
+      if (!mounted) return;
 
-if (result != null) {
+      if (result != null) {
         // 1. Si el perfil devolvió la acción de cerrar sesión
         if (result['action'] == 'logout') {
           setState(() {
             _isLoggedIn = false;
+            _userId = '';
             _userFullName = '';
             _userEmail = '';
             _userPhone = '';
             _userGender = '';
             _userBirthday = '';
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Sesión cerrada correctamente'),
@@ -256,6 +281,7 @@ if (result != null) {
           // 2. Si solo editó sus datos, los actualizamos normalmente
           setState(() {
             _userFullName = result['name'] ?? _userFullName;
+            _userId = result['id'] ?? _userId;
             _userEmail = result['email'] ?? _userEmail;
             _userPhone = result['phone'] ?? _userPhone;
             _userGender = result['gender'] ?? _userGender;
@@ -267,12 +293,17 @@ if (result != null) {
     }
 
     final result = await Navigator.of(context).push<Map<String, String>>(
-      MaterialPageRoute(builder: (context) => const RegisterPage()),
+      MaterialPageRoute(
+        builder: (context) =>
+            RegisterPage(authRepository: widget.authRepository),
+      ),
     );
+    if (!mounted) return;
 
     if (result != null) {
       setState(() {
         _isLoggedIn = true;
+        _userId = result['id'] ?? '';
         _userFullName = result['name'] ?? '';
         _userEmail = result['email'] ?? '';
         _userPhone = result['phone'] ?? '';
@@ -281,7 +312,9 @@ if (result != null) {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Bienvenido, ${_userFirstName.isNotEmpty ? _userFirstName : 'usuario'}'),
+          content: Text(
+            'Bienvenido, ${_userFirstName.isNotEmpty ? _userFirstName : 'usuario'}',
+          ),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
@@ -291,16 +324,18 @@ if (result != null) {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWideAppBar = screenWidth > 720;
+    final isWideAppBar = screenWidth > 900;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-         // ── Navigation Bar ──────────────────────────────────────────────────
+          // ── Navigation Bar ──────────────────────────────────────────────────
           SliverAppBar(
             pinned: true,
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor:
+                Theme.of(context).appBarTheme.backgroundColor ??
+                Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             toolbarHeight: 70,
             titleSpacing: 0,
@@ -308,10 +343,10 @@ if (result != null) {
                 ? Row(
                     children: [
                       // 1. LOGO EN PANTALLAS GRANDES (Escritorio)
-                      Image.network(
-                        'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', // <-- Coloca aquí el link de tu logo
-                        height: 70, // Altura ajustada para que no rompa la barra
-                        fit: BoxFit.contain,
+                      const SizedBox(
+                        width: 150,
+                        height: 70,
+                        child: _LogoImage(height: 70),
                       ),
                       // Centered navigation
                       Expanded(
@@ -324,19 +359,30 @@ if (result != null) {
                                 ...List.generate(_navItems.length, (i) {
                                   final selected = i == _selectedNav;
                                   return GestureDetector(
-                                    onTap: () => setState(() => _selectedNav = i),
+                                    onTap: () =>
+                                        setState(() => _selectedNav = i),
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       margin: const EdgeInsets.only(left: 8),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 14,
                                         vertical: 8,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                                        color: selected
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                            : Colors.transparent,
                                         borderRadius: BorderRadius.circular(24),
                                         border: Border.all(
-                                          color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                                          color: selected
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                              : Colors.transparent,
                                         ),
                                       ),
                                       child: Text(
@@ -344,7 +390,11 @@ if (result != null) {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: selected ? Theme.of(context).colorScheme.onPrimary : _textPrimary(context),
+                                          color: selected
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.onPrimary
+                                              : _textPrimary(context),
                                           letterSpacing: 0.3,
                                         ),
                                       ),
@@ -365,20 +415,26 @@ if (result != null) {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: _isLoggedIn ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.secondary,
+                            color: _isLoggedIn
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.secondary,
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _isLoggedIn ? Icons.verified_user : Icons.person,
+                                _isLoggedIn
+                                    ? Icons.verified_user
+                                    : Icons.person,
                                 color: kWhite,
                                 size: 16,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                _isLoggedIn ? 'Hola, $_userFirstName' : 'Mi Cuenta',
+                                _isLoggedIn
+                                    ? 'Hola, $_userFirstName'
+                                    : 'Mi Cuenta',
                                 style: const TextStyle(
                                   color: kWhite,
                                   fontSize: 13,
@@ -392,17 +448,15 @@ if (result != null) {
                     ],
                   )
                 // 2. LOGO EN PANTALLAS PEQUEÑAS (Móvil)
-                : Image.network(
-                    'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png', // <-- Coloca el mismo link de tu logo aquí
-                    height: 32, 
-                    fit: BoxFit.contain,
-                  ),
+                : const SizedBox(width: 120, child: _LogoImage(height: 32)),
             actions: [
               IconButton(
                 onPressed: widget.onToggleTheme,
                 icon: Icon(
                   widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                  color: Theme.of(context).iconTheme.color ?? _textPrimary(context),
+                  color:
+                      Theme.of(context).iconTheme.color ??
+                      _textPrimary(context),
                 ),
                 tooltip: widget.isDarkMode ? 'Modo diurno' : 'Modo nocturno',
               ),
@@ -423,17 +477,17 @@ if (result != null) {
                   padding: const EdgeInsets.only(right: 12),
                   child: IconButton(
                     onPressed: _openAccount,
-                    icon: Icon(_isLoggedIn ? Icons.verified_user : Icons.person, color: _textPrimary(context)),
+                    icon: Icon(
+                      _isLoggedIn ? Icons.verified_user : Icons.person,
+                      color: _textPrimary(context),
+                    ),
                     tooltip: _isLoggedIn ? 'Perfil' : 'Mi Cuenta',
                   ),
                 ),
             ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(1),
-              child: Container(
-                height: 1,
-                color: _dividerColor(context),
-              ),
+              child: Container(height: 1, color: _dividerColor(context)),
             ),
           ),
 
@@ -509,10 +563,8 @@ if (result != null) {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
                   itemCount: kDestinations.length,
-                  itemBuilder: (context, i) => _DestinationCard(
-                    data: kDestinations[i],
-                    delay: i * 100,
-                  ),
+                  itemBuilder: (context, i) =>
+                      _DestinationCard(data: kDestinations[i], delay: i * 100),
                 ),
               ),
             ),
@@ -520,10 +572,7 @@ if (result != null) {
 
           // ── Features Row ────────────────────────────────────────────────────
           SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _cardsFade,
-              child: _FeaturesRow(),
-            ),
+            child: FadeTransition(opacity: _cardsFade, child: _FeaturesRow()),
           ),
 
           // ── CTA Banner ──────────────────────────────────────────────────────
@@ -531,8 +580,10 @@ if (result != null) {
             child: FadeTransition(
               opacity: _cardsFade,
               child: _CTABanner(
-                isLoggedIn: _isLoggedIn,       // Le pasamos la variable que controla si está logueado
-                onTapRegister: _openAccount,  // Le pasamos la función que abre el registro o perfil
+                isLoggedIn:
+                    _isLoggedIn, // Le pasamos la variable que controla si está logueado
+                onTapRegister:
+                    _openAccount, // Le pasamos la función que abre el registro o perfil
               ),
             ),
           ),
@@ -549,6 +600,32 @@ if (result != null) {
 class _HeroSection extends StatefulWidget {
   @override
   State<_HeroSection> createState() => _HeroSectionState();
+}
+
+class _LogoImage extends StatelessWidget {
+  const _LogoImage({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      'https://i.postimg.cc/Zn66zqnm/Logo-aloja-en-png-sin-fondo.png',
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Text(
+          'ALOJA',
+          style: TextStyle(
+            fontFamily: 'Georgia',
+            fontSize: height > 40 ? 24 : 18,
+            fontWeight: FontWeight.bold,
+            color: _textPrimary(context),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _HeroSectionState extends State<_HeroSection>
@@ -614,9 +691,7 @@ class _HeroSectionState extends State<_HeroSection>
               ),
 
               // Organic sand-dune shapes
-              CustomPaint(
-                painter: _DunePainter(),
-              ),
+              CustomPaint(painter: _DunePainter()),
 
               // Left panel - brand
               if (isWide)
@@ -766,9 +841,7 @@ class _HeroSectionState extends State<_HeroSection>
                       const SizedBox(height: 18),
 
                       // Featured property card
-                      Expanded(
-                        child: _FeaturedCard(),
-                      ),
+                      Expanded(child: _FeaturedCard()),
 
                       // Scroll hint
                       Padding(
@@ -811,9 +884,19 @@ class _StatsBadge extends StatelessWidget {
     return Row(
       children: [
         _StatItem(value: '500+', label: 'Alojamientos'),
-        Container(width: 1, height: 32, color: _dividerColor(context), margin: const EdgeInsets.symmetric(horizontal: 16)),
+        Container(
+          width: 1,
+          height: 32,
+          color: _dividerColor(context),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+        ),
         _StatItem(value: '24', label: 'Estados'),
-        Container(width: 1, height: 32, color: _dividerColor(context), margin: const EdgeInsets.symmetric(horizontal: 16)),
+        Container(
+          width: 1,
+          height: 32,
+          color: _dividerColor(context),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+        ),
         _StatItem(value: '4.9★', label: 'Rating'),
       ],
     );
@@ -830,8 +913,19 @@ class _StatItem extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textPrimary(context), fontFamily: 'Georgia')),
-        Text(label, style: TextStyle(fontSize: 11, color: _textSecondary(context))),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: _textPrimary(context),
+            fontFamily: 'Georgia',
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: _textSecondary(context)),
+        ),
       ],
     );
   }
@@ -874,14 +968,18 @@ class _SearchField extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(
-                fontSize: 11,
-                color: _hintColor(context),
+              hintStyle: TextStyle(fontSize: 11, color: _hintColor(context)),
+              prefixIcon: Icon(
+                icon,
+                size: 15,
+                color: Theme.of(context).colorScheme.secondary,
               ),
-              prefixIcon: Icon(icon, size: 15, color: Theme.of(context).colorScheme.secondary),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -922,13 +1020,21 @@ class _SearchButtonState extends State<_SearchButton> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: _hovered
-                    ? [Theme.of(context).colorScheme.secondary, Theme.of(context).colorScheme.primary]
-                    : [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
+                    ? [
+                        Theme.of(context).colorScheme.secondary,
+                        Theme.of(context).colorScheme.primary,
+                      ]
+                    : [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.secondary,
+                      ],
               ),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: _hovered ? 102 : 51),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: _hovered ? 102 : 51),
                   blurRadius: _hovered ? 16 : 8,
                   offset: const Offset(0, 4),
                 ),
@@ -943,7 +1049,11 @@ class _SearchButtonState extends State<_SearchButton> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search, color: Theme.of(context).colorScheme.onPrimary, size: 18),
+                      Icon(
+                        Icons.search,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Buscar Alojamientos',
@@ -988,11 +1098,21 @@ class _FeaturedCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          
           // 1. IMAGEN DE FONDO (Tu foto de El Ávila)
           Image.network(
-            'https://t3.ftcdn.net/jpg/03/61/09/66/240_F_361096616_nuB4VJ10OZGOKxtMI1sbFgSndNj5nFYR.jpg', 
+            'https://t3.ftcdn.net/jpg/03/61/09/66/240_F_361096616_nuB4VJ10OZGOKxtMI1sbFgSndNj5nFYR.jpg',
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF2D6A4F), Color(0xFFD4A853)],
+                  ),
+                ),
+              );
+            },
           ),
 
           // 2. Capa de degradado inferior
@@ -1023,7 +1143,12 @@ class _FeaturedCard extends StatelessWidget {
             left: 0,
             right: 0,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // Aumenté un pelín el espacio inferior (de 12 a 16) para que respire mejor
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                0,
+                16,
+                16,
+              ), // Aumenté un pelín el espacio inferior (de 12 a 16) para que respire mejor
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1070,9 +1195,10 @@ class _DestinationCardState extends State<_DestinationCard>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 1.03).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.03,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -1109,7 +1235,9 @@ class _DestinationCardState extends State<_DestinationCard>
               ),
               image: d['image'] != null
                   ? DecorationImage(
-                      image: d['image'] is String && (d['image'] as String).startsWith('http')
+                      image:
+                          d['image'] is String &&
+                              (d['image'] as String).startsWith('http')
                           ? NetworkImage(d['image'] as String)
                           : AssetImage(d['image'] as String) as ImageProvider,
                       fit: BoxFit.cover,
@@ -1213,7 +1341,11 @@ class _DestinationCardState extends State<_DestinationCard>
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.star, color: kSandLight, size: 13),
+                              const Icon(
+                                Icons.star,
+                                color: kSandLight,
+                                size: 13,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 '${d['rating']}',
@@ -1329,10 +1461,7 @@ class _CTABanner extends StatelessWidget {
   final bool isLoggedIn; // Recibe si está logueado
   final VoidCallback onTapRegister; // Recibe la función unificada _openAccount
 
-  const _CTABanner({
-    required this.isLoggedIn,
-    required this.onTapRegister,
-  });
+  const _CTABanner({required this.isLoggedIn, required this.onTapRegister});
 
   @override
   Widget build(BuildContext context) {
@@ -1390,7 +1519,7 @@ class _CTABanner extends StatelessWidget {
           const SizedBox(width: 24),
           ElevatedButton(
             // Al hacer clic, ejecuta la acción centralizada de main.dart
-            onPressed: onTapRegister, 
+            onPressed: onTapRegister,
             style: ElevatedButton.styleFrom(
               backgroundColor: kWhite,
               foregroundColor: kTerracotta,
@@ -1466,99 +1595,6 @@ class _DunePainter extends CustomPainter {
       ..close();
 
     canvas.drawPath(path2, paint2);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
-}
-
-class _MountainPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.55);
-
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, size.height * 0.55)
-      ..lineTo(size.width * 0.15, size.height * 0.35)
-      ..lineTo(size.width * 0.28, size.height * 0.52)
-      ..lineTo(size.width * 0.4, size.height * 0.28)
-      ..lineTo(size.width * 0.55, size.height * 0.48)
-      ..lineTo(size.width * 0.68, size.height * 0.3)
-      ..lineTo(size.width * 0.82, size.height * 0.5)
-      ..lineTo(size.width, size.height * 0.4)
-      ..lineTo(size.width, size.height)
-      ..close();
-
-    canvas.drawPath(path, paint);
-
-    // Lighter layer
-    final paint2 = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFF52B788).withValues(alpha: 0.35);
-
-    final path2 = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, size.height * 0.65)
-      ..lineTo(size.width * 0.12, size.height * 0.50)
-      ..lineTo(size.width * 0.25, size.height * 0.62)
-      ..lineTo(size.width * 0.38, size.height * 0.42)
-      ..lineTo(size.width * 0.5, size.height * 0.58)
-      ..lineTo(size.width * 0.62, size.height * 0.44)
-      ..lineTo(size.width * 0.75, size.height * 0.60)
-      ..lineTo(size.width * 0.88, size.height * 0.50)
-      ..lineTo(size.width, size.height * 0.58)
-      ..lineTo(size.width, size.height)
-      ..close();
-
-    canvas.drawPath(path2, paint2);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
-}
-
-class _CitySkylinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFF1B4332).withOpacity(0.7);
-
-    // Simple city blocks
-    final buildings = [
-      [0.05, 0.78, 0.04, 0.15],
-      [0.1, 0.72, 0.05, 0.21],
-      [0.16, 0.80, 0.03, 0.13],
-      [0.2, 0.68, 0.04, 0.25],
-      [0.25, 0.74, 0.06, 0.19],
-      [0.32, 0.76, 0.04, 0.17],
-      [0.37, 0.65, 0.05, 0.28],
-      [0.43, 0.72, 0.05, 0.21],
-      [0.49, 0.78, 0.04, 0.15],
-      [0.54, 0.70, 0.06, 0.23],
-      [0.61, 0.75, 0.04, 0.18],
-      [0.66, 0.67, 0.05, 0.26],
-      [0.72, 0.73, 0.04, 0.20],
-      [0.77, 0.79, 0.05, 0.14],
-      [0.83, 0.71, 0.04, 0.22],
-      [0.88, 0.76, 0.05, 0.17],
-      [0.94, 0.80, 0.04, 0.13],
-    ];
-
-    for (final b in buildings) {
-      canvas.drawRect(
-        Rect.fromLTWH(
-          size.width * b[0],
-          size.height * b[1],
-          size.width * b[2],
-          size.height * b[3],
-        ),
-        paint,
-      );
-    }
   }
 
   @override
