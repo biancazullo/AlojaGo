@@ -68,7 +68,12 @@ class FirebaseAuthRepository implements AuthRepository {
         birthday: birthday,
         role: role,
       );
-      await _userProfileService.createUser(user);
+      try {
+        await _userProfileService.createUser(user);
+      } catch (_) {
+        // Firebase Auth is the source of truth for account existence. If the
+        // profile write fails, still let the user continue and repair it later.
+      }
       return user;
     } on FirebaseAuthException catch (error) {
       throw AppException(_authMessage(error));
@@ -87,13 +92,20 @@ class FirebaseAuthRepository implements AuthRepository {
         email: email.trim().toLowerCase(),
         password: password,
       );
-      final profile = await _userProfileService.getUser(credentials.uid);
-      return profile ??
-          AppUser(
-            id: credentials.uid,
-            name: credentials.email.split('@').first,
-            email: credentials.email,
-          );
+      final fallbackUser = AppUser(
+        id: credentials.uid,
+        name: credentials.email.split('@').first,
+        email: credentials.email,
+      );
+      try {
+        final profile = await _userProfileService.getUser(credentials.uid);
+        if (profile != null) return profile;
+        await _userProfileService.createUser(fallbackUser);
+      } catch (_) {
+        // Do not reject a valid Firebase Auth session just because Firestore
+        // cannot read or repair the optional profile document.
+      }
+      return fallbackUser;
     } on FirebaseAuthException catch (error) {
       throw AppException(_authMessage(error));
     } catch (_) {

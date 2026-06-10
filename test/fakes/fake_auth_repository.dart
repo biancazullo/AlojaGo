@@ -27,7 +27,7 @@ class FakeAuthRepository implements AuthRepository {
       nextError = null;
       throw error;
     }
-    currentUser = AppUser(id: 'user-1', name: 'Naim', email: email);
+    currentUser = AppUser(id: 'user-1', name: 'Usuario Invalido', email: email);
     return currentUser!;
   }
 

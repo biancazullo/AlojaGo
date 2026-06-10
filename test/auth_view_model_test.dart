@@ -10,8 +10,8 @@ void main() {
     final viewModel = AuthViewModel(authRepository: repository);
 
     final user = await viewModel.register(
-      name: 'Naim Medina',
-      email: 'naim@correo.unimet.edu.ve',
+      name: 'Usuario Invalido',
+      email: 'usuarioinvalido@correo.unimet.edu.ve',
       password: 'password123',
       phone: '+58 412 1234567',
       gender: 'Masculino',
@@ -20,7 +20,7 @@ void main() {
 
     expect(user, isNotNull);
     expect(viewModel.isAuthenticated, isTrue);
-    expect(viewModel.currentUser?.firstName, 'Naim');
+    expect(viewModel.currentUser?.firstName, 'Usuario Invalido');
     expect(viewModel.errorMessage, isNull);
     expect(viewModel.isLoading, isFalse);
   });
@@ -33,7 +33,7 @@ void main() {
       final viewModel = AuthViewModel(authRepository: repository);
 
       final user = await viewModel.login(
-        email: 'naim@correo.unimet.edu.ve',
+        email: 'usuarioinvalido@correo.unimet.edu.ve',
         password: 'bad-password',
       );
 
@@ -49,7 +49,7 @@ void main() {
     final viewModel = AuthViewModel(authRepository: repository);
 
     await viewModel.login(
-      email: 'naim@correo.unimet.edu.ve',
+      email: 'usuarioinvalido@correo.unimet.edu.ve',
       password: 'password123',
     );
     await viewModel.logout();
