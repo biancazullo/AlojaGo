@@ -57,22 +57,22 @@ class DefaultFirebaseOptions {
     projectId: 'alojago',
     storageBucket: 'alojago.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAbLNNZZyTq0OpXluDpXC6_vAocvSm0Xfk',
     appId: '1:946204607353:ios:2fb6f51a8f303dad0125a8',
     messagingSenderId: '946204607353',
     projectId: 'alojago',
     storageBucket: 'alojago.firebasestorage.app',
+    iosClientId: '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
     iosBundleId: 'com.example.proyec',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyAbLNNZZyTq0OpXluDpXC6_vAocvSm0Xfk',
     appId: '1:946204607353:ios:2fb6f51a8f303dad0125a8',
     messagingSenderId: '946204607353',
     projectId: 'alojago',
     storageBucket: 'alojago.firebasestorage.app',
+    iosClientId: '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
     iosBundleId: 'com.example.proyec',
   );
 

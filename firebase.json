@@ -1,1 +1,48 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"alojago","appId":"1:946204607353:android:ba5ee9335eeb2b8a0125a8","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"alojago","configurations":{"android":"1:946204607353:android:ba5ee9335eeb2b8a0125a8","ios":"1:946204607353:ios:2fb6f51a8f303dad0125a8","macos":"1:946204607353:ios:2fb6f51a8f303dad0125a8","web":"1:946204607353:web:bbecb55edd5d345d0125a8","windows":"1:946204607353:web:b0a57f6878b2e5570125a8"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "alojago",
+          "appId": "1:946204607353:android:ba5ee9335eeb2b8a0125a8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "alojago",
+          "configurations": {
+            "android": "1:946204607353:android:ba5ee9335eeb2b8a0125a8",
+            "ios": "1:946204607353:ios:2fb6f51a8f303dad0125a8",
+            "macos": "1:946204607353:ios:2fb6f51a8f303dad0125a8",
+            "web": "1:946204607353:web:bbecb55edd5d345d0125a8",
+            "windows": "1:946204607353:web:b0a57f6878b2e5570125a8"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AlojaGo",
+        "supportEmail": "support@undefined.firebaseapp.com"
+      }
+    }
+  }
+}
