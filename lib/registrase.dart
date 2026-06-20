@@ -21,8 +21,9 @@ const Color kEmeraldMid = Color(0xFF2D6A4F);
 
 // ── PÁGINA DE REGISTRO ─────────────────────────────────────────────────────
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key, this.authRepository});
+  const RegisterPage({super.key, this.authRepository, this.onLoginSuccess});
   final AuthRepository? authRepository;
+  final Function(Map<String, String>)? onLoginSuccess;
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -127,7 +128,13 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
-    navigator.pop(user.toProfileMap());
+    final userData = user.toProfileMap().map((key, value) => MapEntry(key, value.toString()));
+    
+    if (widget.onLoginSuccess != null) {
+      widget.onLoginSuccess!(userData);
+    }
+    
+    navigator.popUntil((route) => route.isFirst);
   }
 
   @override
@@ -177,6 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       onBack: () => setState(() => _step = 1),
                       onSubmit: _onFormNext,
                       authRepository: widget.authRepository,
+                      onLoginSuccess: widget.onLoginSuccess,
                     )
                   : _PinEntryStep(
                       key: const ValueKey('step3'),
@@ -389,6 +397,7 @@ class _RegistrationForm extends StatelessWidget {
     required this.onBack,
     required this.onSubmit,
     required this.authRepository,
+    required this.onLoginSuccess,
   });
 
   final GlobalKey<FormState> formKey;
@@ -409,6 +418,7 @@ class _RegistrationForm extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onSubmit;
   final AuthRepository? authRepository;
+  final Function(Map<String, String>)? onLoginSuccess;
 
   String get _roleName {
     switch (selectedRole) {
@@ -599,8 +609,10 @@ class _RegistrationForm extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
-                        builder: (context) =>
-                            LoginPage(authRepository: authRepository),
+                        builder: (context) => LoginPage(
+                          authRepository: authRepository,
+                          onLoginSuccess: onLoginSuccess,
+                        ),
                       ),
                     );
                   },
@@ -917,8 +929,9 @@ class _PinEntryStepState extends State<_PinEntryStep> {
 
 // ── PÁGINA DE LOGIN ────────────────────────────────────────────────────────
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, this.authRepository});
+  const LoginPage({super.key, this.authRepository, this.onLoginSuccess});
   final AuthRepository? authRepository;
+  final Function(Map<String, String>)? onLoginSuccess;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -1128,8 +1141,24 @@ class _LoginPageState extends State<LoginPage> {
                                       );
                                       return;
                                     }
-                                    navigator.pop(user.toProfileMap());
-                                  },
+                                final rawMap = user.toProfileMap();
+                                final Map<String, String> userData = {
+                                  'id': (rawMap['id'] ?? '').toString(),
+                                  'name': (rawMap['name'] ?? _emailController.text.split('@')[0]).toString(),
+                                  'email': (rawMap['email'] ?? _emailController.text.trim()).toString(),
+                                  'phone': (rawMap['phone'] ?? '').toString(),
+                                  'gender': (rawMap['gender'] ?? '').toString(),
+                                  'birthday': (rawMap['birthday'] ?? '').toString(),
+                                  'role': (rawMap['role'] ?? 'traveler').toString(),
+                                };
+
+                                if (widget.onLoginSuccess != null) {
+                                  widget.onLoginSuccess!(userData);
+                                }
+                                
+                                navigator.popUntil((route) => route.isFirst);
+                              },
+
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kFigmaBtnPrimary,
                               elevation: 0,
@@ -1158,10 +1187,14 @@ class _LoginPageState extends State<LoginPage> {
                       Center(
                         child: TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushReplacement(
+                            Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => RegisterPage(
                                   authRepository: widget.authRepository,
+                                  onLoginSuccess: (datosRegistro) {
+                                    widget.onLoginSuccess?.call(datosRegistro);
+                                    Navigator.of(context).pop();
+                                  },
                                 ),
                               ),
                             );

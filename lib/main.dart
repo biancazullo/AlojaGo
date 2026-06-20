@@ -283,7 +283,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
           _userBirthday = '';
           _userRole = UserRole.traveler;
         });
-        _showMessage('Sesion cerrada correctamente');
+        _showMessage('Sesión cerrada correctamente');
       } else {
         setState(() {
           _userFullName = result['name'] ?? _userFullName;
@@ -297,32 +297,36 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
       return;
     }
 
-    final result = await Navigator.of(context).push<Map<String, String>>(
+    void manejarExitoLogin(Map<String, String> datosUsuario) {
+      final roleStr = datosUsuario['role'] ?? 'traveler';
+      final role = UserRole.values.firstWhere(
+        (r) => r.name == roleStr,
+        orElse: () => UserRole.traveler,
+      );
+
+      setState(() {
+        _isLoggedIn = true;
+        _userId = datosUsuario['id'] ?? '';
+        _userFullName = datosUsuario['name'] ?? '';
+        _userEmail = datosUsuario['email'] ?? '';
+        _userPhone = datosUsuario['phone'] ?? '';
+        _userGender = datosUsuario['gender'] ?? '';
+        _userBirthday = datosUsuario['birthday'] ?? '';
+        _userRole = role;
+      });
+
+      _showMessage('Bienvenido');
+    }
+
+    await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) =>
-            RegisterPage(authRepository: widget.authRepository),
+        builder: (context) => LoginPage(
+          authRepository: widget.authRepository,
+          onLoginSuccess: (datosUsuario) {
+            manejarExitoLogin(datosUsuario);
+          },
+        ),
       ),
-    );
-    if (!mounted || result == null) return;
-
-    final roleStr = result['role'] ?? 'traveler';
-    final role = UserRole.values.firstWhere(
-      (r) => r.name == roleStr,
-      orElse: () => UserRole.traveler,
-    );
-
-    setState(() {
-      _isLoggedIn = true;
-      _userId = result['id'] ?? '';
-      _userFullName = result['name'] ?? '';
-      _userEmail = result['email'] ?? '';
-      _userPhone = result['phone'] ?? '';
-      _userGender = result['gender'] ?? '';
-      _userBirthday = result['birthday'] ?? '';
-      _userRole = role;
-    });
-    _showMessage(
-      'Bienvenido, ${_userFirstName.isEmpty ? 'usuario' : _userFirstName}',
     );
   }
 
@@ -815,14 +819,26 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
               onSearch: _runSearch,
             ),
           ),
-          SliverToBoxAdapter(
-            child: _SectionHeader(
-              title: 'Alojamientos disponibles',
-              subtitle: '${filteredListings.length} resultados filtrados',
-              actionLabel: 'Nueva publicacion',
-              onAction: () => _openListingForm(),
-            ),
-          ),
+
+        if (_isLoggedIn && (_userRole == UserRole.operator || _userRole == UserRole.admin))
+                    SliverToBoxAdapter(
+                      child: _SectionHeader(
+                        title: 'Alojamientos disponibles',
+                        subtitle: '${filteredListings.length} resultados filtrados',
+                        actionLabel: 'Nueva publicacion',
+                        onAction: () => _openListingForm(),
+                      ),
+                    )
+                  else
+                    SliverToBoxAdapter(
+                      child: _SectionHeader(
+                        title: 'Alojamientos disponibles',
+                        subtitle: '${filteredListings.length} resultados filtrados',
+                        actionLabel: '',
+                        onAction: () {},
+                      ),
+                    ),
+
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             sliver: SliverGrid.builder(
@@ -1185,28 +1201,33 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(subtitle),
-              ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+        
+          if (actionLabel.isNotEmpty)
+            OutlinedButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.add, size: 16, color: kEmerald),
+              label: Text(actionLabel, style: const TextStyle(color: kEmerald)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: kEmerald),
+              ),
             ),
-          ),
-          FilledButton.icon(
-            onPressed: onAction,
-            icon: const Icon(Icons.add_home_work_outlined),
-            label: Text(actionLabel),
-          ),
         ],
       ),
     );

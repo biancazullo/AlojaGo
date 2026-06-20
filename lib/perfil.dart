@@ -461,7 +461,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildTextField(
             controller: _emailController,
-            labelText: 'Correo electrónico',
+            labelText: 'Correo electrónico (No modificable)',
+            enabled: false,
           ),
           _buildTextField(controller: _phoneController, labelText: 'Teléfono'),
 
@@ -490,22 +491,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
           _buildTextField(
             controller: _birthdayController,
-            labelText: 'Fecha de nacimiento',
+            labelText: 'Fecha de nacimiento (No modificable)',
             suffixIcon: Icons.calendar_today,
-            onSuffixTap: () async {
-              DateTime? pickedDate = await showDatePicker(
-                context: context,
-                initialDate: DateTime(1995, 1, 1),
-                firstDate: DateTime(1930),
-                lastDate: DateTime.now(),
-              );
-              if (pickedDate != null) {
-                setState(() {
-                  _birthdayController.text =
-                      "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
-                });
-              }
-            },
+            enabled: false, // Bloquea escritura directa
+            onSuffixTap: null, // Anula la acción de abrir el calendario
           ),
 
           SizedBox(
@@ -573,21 +562,25 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildTextField({
+Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
     IconData? suffixIcon,
     VoidCallback? onSuffixTap,
+    bool enabled = true,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
         controller: controller,
+        enabled: enabled,
         decoration: InputDecoration(
           labelText: labelText,
-          labelStyle: const TextStyle(color: Color(0xFF5A5A5A)),
+          labelStyle: TextStyle(color: enabled ? const Color(0xFF5A5A5A) : Colors.grey),
+          filled: !enabled,
+          fillColor: enabled ? null : Colors.grey.withValues(alpha: 0.1),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-          suffixIcon: suffixIcon != null
+          suffixIcon: suffixIcon != null && enabled
               ? IconButton(
                   icon: Icon(suffixIcon, color: const Color(0xFF1B4332)),
                   onPressed: onSuffixTap,
