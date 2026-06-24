@@ -444,7 +444,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
 
     switch (_userRole) {
       case UserRole.traveler:
-        Navigator.of(context).push(
+        .of(context).push(
           MaterialPageRoute(
             builder: (context) => TravelerDashboard(
               user: currentUser,

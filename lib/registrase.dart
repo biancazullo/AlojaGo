@@ -72,34 +72,37 @@ class _RegisterPageState extends State<RegisterPage> {
     _doRegister();
   }
 
-  // ── Registro final ─────────────────────────────────────────────────────
   Future<void> _doRegister() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final user = await _viewModel.register(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      phone: _phoneController.text.trim(),
-      gender: _selectedGender ?? '',
-      birthday: _birthdayController.text.trim(),
-      role: UserRole.traveler,
-    );
+  final navigator = Navigator.of(context);
+  
+  // 1. Determinamos el rol automáticamente por el correo
+  UserRole rolAsignado = UserRole.traveler; 
+  final emailCheck = _emailController.text.trim();
 
-    if (!mounted) return;
-    if (user == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _viewModel.errorMessage ?? 'No se pudo crear la cuenta',
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-    navigator.pop(user.toProfileMap());
+  if (emailCheck == 'bzullo@correo.unimet.edu.ve') {
+    rolAsignado = UserRole.admin;
+  } else if (emailCheck.contains('@operador.com')) { 
+    rolAsignado = UserRole.operator;
   }
+
+  // 2. Registramos mandando los parámetros requeridos por el ViewModel
+  final user = await _viewModel.register(
+    name: _nameController.text.trim(),
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+    phone: _phoneController.text.trim(),
+    gender: _selectedGender ?? '', // Soluciona el error de gender
+    birthday: _birthdayController.text.trim(), // Soluciona el error de birthday
+    role: rolAsignado, // Le pasa el rol calculado automáticamente
+  );
+
+  // redirije mediante _openRoleDashboard(),
+  if (user != null) {
+    navigator.pop();
+
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -531,6 +534,7 @@ class _RegistrationForm extends StatelessWidget {
   }
 }
 
+
 Widget _figmaField({
   required String label,
   required String hint,
@@ -811,7 +815,15 @@ class _LoginPageState extends State<LoginPage> {
                                       );
                                       return;
                                     }
-                                    navigator.pop(user.toProfileMap());
+                                    final mapData = user.toProfileMap();
+                                    final Map<String, String> finalStringData = {};
+
+                                    // Convertimos todo estrictamente a texto (String) para que coincida con main.dart
+                                    mapData.forEach((key, value) {
+                                      finalStringData[key.toString()] = value.toString();
+                                  });
+
+                                  navigator.pop(finalStringData);
                                   },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kFigmaBtnPrimary,
