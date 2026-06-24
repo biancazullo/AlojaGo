@@ -6,7 +6,7 @@ import '../../domain/models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 
-const adminEmail = 'admin@correo.unimet.edu.ve';
+const adminEmail = 'bzullo@correo.unimet.edu.ve';
 
 abstract class AuthRepository {
   Stream<String?> authStateChanges();
