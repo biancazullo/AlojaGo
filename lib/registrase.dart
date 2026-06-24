@@ -414,13 +414,16 @@ class _RegistrationForm extends StatelessWidget {
               const SizedBox(height: 30),
               Center(
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            LoginPage(authRepository: authRepository),
-                      ),
-                    );
+                  onPressed: () async {
+                    final result = await Navigator.of(context)
+                        .push<Map<String, String>>(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                LoginPage(authRepository: authRepository),
+                          ),
+                        );
+                    if (!context.mounted || result == null) return;
+                    Navigator.of(context).pop(result);
                   },
                   child: RichText(
                     text: const TextSpan(
@@ -837,14 +840,17 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 30),
                       Center(
                         child: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => RegisterPage(
-                                  authRepository: widget.authRepository,
-                                ),
-                              ),
-                            );
+                          onPressed: () async {
+                            final result = await Navigator.of(context)
+                                .push<Map<String, String>>(
+                                  MaterialPageRoute(
+                                    builder: (context) => RegisterPage(
+                                      authRepository: widget.authRepository,
+                                    ),
+                                  ),
+                                );
+                            if (!context.mounted || result == null) return;
+                            Navigator.of(context).pop(result);
                           },
                           child: RichText(
                             text: const TextSpan(
