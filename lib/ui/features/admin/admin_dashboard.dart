@@ -4,9 +4,11 @@
 
 import 'package:flutter/material.dart';
 
+import '../../../data/services/operator_request_service.dart';
 import '../../../data/services/pin_service.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/listing.dart';
+import '../../../domain/models/operator_request.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({
@@ -34,11 +36,12 @@ class _AdminDashboardState extends State<AdminDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _pinService = PinService();
+  final _operatorRequestService = OperatorRequestService();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -63,8 +66,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard_outlined), text: 'Panel'),
+            Tab(icon: Icon(Icons.assignment_ind_outlined), text: 'Solicitudes'),
             Tab(icon: Icon(Icons.people_outlined), text: 'Usuarios'),
-            Tab(icon: Icon(Icons.home_work_outlined), text: 'Ofertas'),
+            Tab(icon: Icon(Icons.home_work_outlined), text: 'Posadas'),
             Tab(icon: Icon(Icons.settings_outlined), text: 'Config.'),
             Tab(icon: Icon(Icons.pin_outlined), text: 'PINs'),
           ],
@@ -76,27 +80,22 @@ class _AdminDashboardState extends State<AdminDashboard>
           _MetricsDashboard(
             totalUsers: widget.allUsers.length,
             totalListings: widget.allListings.length,
-            activeListings:
-                widget.allListings
-                    .where((l) => l.status == ListingStatus.active)
-                    .length,
-            pendingListings:
-                widget.allListings
-                    .where((l) => l.status == ListingStatus.pendingApproval)
-                    .length,
+            activeListings: widget.allListings
+                .where((l) => l.status == ListingStatus.active)
+                .length,
+            pendingListings: widget.allListings
+                .where((l) => l.status == ListingStatus.pendingApproval)
+                .length,
           ),
-          _UsersTab(
-            users: widget.allUsers,
-            onUpdateUser: widget.onUpdateUser,
-          ),
+          _OperatorRequestsTab(requestService: _operatorRequestService),
+          _UsersTab(users: widget.allUsers, onUpdateUser: widget.onUpdateUser),
           _ListingsAdminTab(
             listings: widget.allListings,
             onApprove: (l) =>
                 widget.onSaveListing(l.copyWith(status: ListingStatus.active)),
-            onReject: (l) =>
-                widget.onSaveListing(
-                  l.copyWith(status: ListingStatus.rejected),
-                ),
+            onReject: (l) => widget.onSaveListing(
+              l.copyWith(status: ListingStatus.rejected),
+            ),
             onEdit: (l) => _openEditListing(context, l),
             onDelete: widget.onDeleteListing,
           ),
@@ -107,10 +106,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Future<void> _openEditListing(BuildContext context, AlojaListing listing) async {
+  Future<void> _openEditListing(
+    BuildContext context,
+    AlojaListing listing,
+  ) async {
     final titleC = TextEditingController(text: listing.title);
     final priceC = TextEditingController(text: listing.nightlyPrice.toString());
-    final maxResC = TextEditingController(text: listing.maxReservations.toString());
+    final maxResC = TextEditingController(
+      text: listing.maxReservations.toString(),
+    );
     final formKey = GlobalKey<FormState>();
 
     final saved = await showDialog<AlojaListing>(
@@ -155,8 +159,141 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     );
 
-    for (final c in [titleC, priceC, maxResC]) c.dispose();
-    if (saved != null) widget.onSaveListing(saved);
+    for (final c in [titleC, priceC, maxResC]) {
+      c.dispose();
+    }
+    if (saved != null) {
+      widget.onSaveListing(saved);
+    }
+  }
+}
+
+class _OperatorRequestsTab extends StatelessWidget {
+  const _OperatorRequestsTab({required this.requestService});
+
+  final OperatorRequestService requestService;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<OperatorRequest>>(
+      stream: requestService.watchRequests(),
+      builder: (context, snapshot) {
+        final requests = snapshot.data ?? const <OperatorRequest>[];
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (requests.isEmpty) {
+          return const Center(child: Text('No hay solicitudes de operador'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            final request = requests[index];
+            final isPending = request.status == OperatorRequestStatus.pending;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isPending
+                      ? const Color(0xFFD4A853)
+                      : const Color(0xFFE2E6D7),
+                  child: Icon(
+                    isPending
+                        ? Icons.pending_actions
+                        : request.status == OperatorRequestStatus.approved
+                        ? Icons.check
+                        : Icons.close,
+                    color: isPending ? Colors.white : const Color(0xFF1B4332),
+                  ),
+                ),
+                title: Text(request.email),
+                subtitle: Text(
+                  '${request.name} · ${_requestStatusLabel(request.status)}',
+                ),
+                trailing: isPending
+                    ? Wrap(
+                        spacing: 8,
+                        children: [
+                          FilledButton(
+                            onPressed: () => _approveRequest(context, request),
+                            child: const Text('Aceptar'),
+                          ),
+                          OutlinedButton(
+                            onPressed: () async {
+                              await requestService.reject(request);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Solicitud rechazada'),
+                                ),
+                              );
+                            },
+                            child: const Text('Rechazar'),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _requestStatusLabel(OperatorRequestStatus status) {
+    switch (status) {
+      case OperatorRequestStatus.approved:
+        return 'Aprobada';
+      case OperatorRequestStatus.rejected:
+        return 'Rechazada';
+      case OperatorRequestStatus.pending:
+        return 'Pendiente';
+    }
+  }
+
+  Future<void> _approveRequest(
+    BuildContext context,
+    OperatorRequest request,
+  ) async {
+    final pinController = TextEditingController();
+    final pin = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Crear PIN de operador'),
+        content: TextField(
+          controller: pinController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'PIN',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = pinController.text.trim();
+              if (value.isNotEmpty) Navigator.pop(context, value);
+            },
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+    pinController.dispose();
+    if (pin == null) return;
+
+    await requestService.approve(request, pin);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Operador aprobado y PIN asignado')),
+    );
   }
 }
 
@@ -209,10 +346,9 @@ class _MetricsDashboard extends StatelessWidget {
         children: [
           Text(
             'Panel de Control',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 20),
           Wrap(
@@ -360,9 +496,11 @@ class _UsersTab extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: const Color(0xFF1B4332).withOpacity(0.12),
+              backgroundColor: const Color(0xFF1B4332).withValues(alpha: 0.12),
               child: Text(
-                user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?',
+                user.firstName.isNotEmpty
+                    ? user.firstName[0].toUpperCase()
+                    : '?',
                 style: const TextStyle(
                   color: Color(0xFF1B4332),
                   fontWeight: FontWeight.bold,
@@ -412,11 +550,7 @@ class _UsersTab extends StatelessWidget {
     }
   }
 
-  void _handleUserAction(
-    BuildContext context,
-    AppUser user,
-    String action,
-  ) {
+  void _handleUserAction(BuildContext context, AppUser user, String action) {
     UserRole? newRole;
     switch (action) {
       case 'traveler':
@@ -457,7 +591,8 @@ class _ListingsAdminTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Mostrar pendientes primero
-    final sorted = [...listings]..sort((a, b) {
+    final sorted = [...listings]
+      ..sort((a, b) {
         if (a.status == ListingStatus.pendingApproval) return -1;
         if (b.status == ListingStatus.pendingApproval) return 1;
         return 0;
@@ -569,8 +704,14 @@ class _MaintenanceTab extends StatefulWidget {
 }
 
 class _MaintenanceTabState extends State<_MaintenanceTab> {
-  List<String> _types = ['Hotel', 'Posada', 'Cabaña', 'Apartamento', 'Resort'];
-  List<String> _categories = ['Estándar', 'Premium', 'Económico', 'Lujo'];
+  final List<String> _types = [
+    'Hotel',
+    'Posada',
+    'Cabaña',
+    'Apartamento',
+    'Resort',
+  ];
+  final List<String> _categories = ['Estándar', 'Premium', 'Económico', 'Lujo'];
 
   void _addItem(List<String> list, String label) async {
     final c = TextEditingController();
@@ -592,7 +733,9 @@ class _MaintenanceTabState extends State<_MaintenanceTab> {
           ),
           FilledButton(
             onPressed: () {
-              if (c.text.trim().isNotEmpty) Navigator.pop(context, c.text.trim());
+              if (c.text.trim().isNotEmpty) {
+                Navigator.pop(context, c.text.trim());
+              }
             },
             child: const Text('Agregar'),
           ),
@@ -612,10 +755,9 @@ class _MaintenanceTabState extends State<_MaintenanceTab> {
         children: [
           Text(
             'Tablas de Mantenimiento',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           _TableSection(
@@ -758,6 +900,7 @@ class _PinManagementTabState extends State<_PinManagementTab> {
       _loading = false;
       _saved = true;
     });
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('PINs actualizados correctamente'),
@@ -785,10 +928,9 @@ class _PinManagementTabState extends State<_PinManagementTab> {
         children: [
           Text(
             'Gestión de PINs',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(

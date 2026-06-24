@@ -46,7 +46,7 @@ void main() {
     );
 
     expect(user.id, 'user-1');
-    expect(user.name, 'Usuario Invalido');
+    expect(user.name, 'usuarioinvalido');
     expect(profileService.savedUser?.id, 'user-1');
   });
 
@@ -142,6 +142,11 @@ class _FakeUserProfileService implements UserProfileService {
   Future<AppUser?> getUser(String id) async {
     if (failGet) throw Exception('profile get failed');
     return savedUser;
+  }
+
+  @override
+  Stream<List<AppUser>> watchUsers() {
+    return Stream.value([?savedUser]);
   }
 
   @override

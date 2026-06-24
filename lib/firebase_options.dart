@@ -63,7 +63,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '946204607353',
     projectId: 'alojago',
     storageBucket: 'alojago.firebasestorage.app',
-    iosClientId: '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
+    iosClientId:
+        '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
     iosBundleId: 'com.example.proyec',
   );
   static const FirebaseOptions macos = FirebaseOptions(
@@ -72,7 +73,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '946204607353',
     projectId: 'alojago',
     storageBucket: 'alojago.firebasestorage.app',
-    iosClientId: '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
+    iosClientId:
+        '946204607353-jldd0mj1g0gi2hu0q70mktiugkv358me.apps.googleusercontent.com',
     iosBundleId: 'com.example.proyec',
   );
 

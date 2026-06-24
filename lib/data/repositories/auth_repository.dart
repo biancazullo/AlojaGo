@@ -6,6 +6,8 @@ import '../../domain/models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 
+const adminEmail = 'admin@correo.unimet.edu.ve';
+
 abstract class AuthRepository {
   Stream<String?> authStateChanges();
   Future<AppUser> register({
@@ -15,7 +17,7 @@ abstract class AuthRepository {
     required String phone,
     required String gender,
     required String birthday,
-    required UserRole role,  // ← NUEVO
+    UserRole role = UserRole.traveler,
   });
   Future<AppUser> login({required String email, required String password});
   Future<AppUser?> currentUserProfile();
@@ -52,7 +54,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String phone,
     required String gender,
     required String birthday,
-    required UserRole role,
+    UserRole role = UserRole.traveler,
   }) async {
     try {
       final credentials = await _authService.createUser(
@@ -66,7 +68,9 @@ class FirebaseAuthRepository implements AuthRepository {
         phone: phone.trim(),
         gender: gender,
         birthday: birthday,
-        role: role,
+        role: email.trim().toLowerCase() == adminEmail
+            ? UserRole.admin
+            : UserRole.traveler,
       );
       try {
         await _userProfileService.createUser(user);
@@ -96,10 +100,22 @@ class FirebaseAuthRepository implements AuthRepository {
         id: credentials.uid,
         name: credentials.email.split('@').first,
         email: credentials.email,
+        role: credentials.email.trim().toLowerCase() == adminEmail
+            ? UserRole.admin
+            : UserRole.traveler,
       );
       try {
         final profile = await _userProfileService.getUser(credentials.uid);
-        if (profile != null) return profile;
+        if (profile != null) {
+          final shouldBeAdmin =
+              profile.email.trim().toLowerCase() == adminEmail;
+          if (shouldBeAdmin && profile.role != UserRole.admin) {
+            final adminProfile = profile.copyWith(role: UserRole.admin);
+            await _userProfileService.updateUser(adminProfile);
+            return adminProfile;
+          }
+          return profile;
+        }
         await _userProfileService.createUser(fallbackUser);
       } catch (_) {
         // Do not reject a valid Firebase Auth session just because Firestore

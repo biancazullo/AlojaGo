@@ -30,7 +30,7 @@ class AuthViewModel extends ChangeNotifier {
     required String phone,
     required String gender,
     required String birthday,
-    UserRole role = UserRole.traveler,  // ← NUEVO parámetro
+    UserRole role = UserRole.traveler, // ← NUEVO parámetro
   }) {
     return _run(
       () => _authRepository.register(

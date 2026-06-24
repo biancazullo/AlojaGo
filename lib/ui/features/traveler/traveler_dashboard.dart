@@ -77,13 +77,14 @@ class _TravelerDashboardState extends State<TravelerDashboard>
     setState(() {
       final idx = _myReservations.indexWhere((r) => r.id == res.id);
       if (idx != -1) {
-        _myReservations[idx] =
-            res.copyWith(status: ReservationStatus.cancelled);
+        _myReservations[idx] = res.copyWith(
+          status: ReservationStatus.cancelled,
+        );
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reserva cancelada')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Reserva cancelada')));
   }
 
   @override
@@ -233,19 +234,20 @@ class _ExploreTabState extends State<_ExploreTab> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: ['Todos', 'Hotel', 'Posada', 'Cabaña', 'Apartamento']
-                      .map(
-                        (type) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(type),
-                            selected: _typeFilter == type,
-                            onSelected: (_) =>
-                                setState(() => _typeFilter = type),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      ['Todos', 'Hotel', 'Posada', 'Cabaña', 'Apartamento']
+                          .map(
+                            (type) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(type),
+                                selected: _typeFilter == type,
+                                onSelected: (_) =>
+                                    setState(() => _typeFilter = type),
+                              ),
+                            ),
+                          )
+                          .toList(),
                 ),
               ),
             ],
@@ -332,8 +334,7 @@ class _ListingTile extends StatelessWidget {
             width: 60,
             height: 60,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                const Icon(Icons.image_not_supported),
+            errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported),
           ),
         ),
         title: Text(
@@ -353,9 +354,7 @@ class _ListingTile extends StatelessWidget {
             FilledButton.icon(
               onPressed: listing.hasAvailability ? onReserve : null,
               icon: const Icon(Icons.credit_card, size: 16),
-              label: Text(
-                listing.hasAvailability ? 'Reservar' : 'Agotado',
-              ),
+              label: Text(listing.hasAvailability ? 'Reservar' : 'Agotado'),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
               ),
@@ -437,7 +436,7 @@ class _MyReservationsTab extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.12),
+                        color: statusColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

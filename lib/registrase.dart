@@ -1,11 +1,10 @@
 // lib/registrase.dart
-// Registro con selección de rol + verificación de PIN para operador/admin
+// Registro normal de viajeros.
 // Mantiene el estilo Figma (kFigma*) original del proyecto.
 
 import 'package:flutter/material.dart';
 
 import 'data/repositories/auth_repository.dart';
-import 'data/services/pin_service.dart';
 import 'domain/models/app_user.dart';
 import 'ui/features/auth/view_models/auth_view_model.dart';
 
@@ -29,10 +28,6 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // Paso 1: elegir rol. Paso 2: formulario. Paso 3: PIN (si aplica).
-  int _step = 1;
-  UserRole _selectedRole = UserRole.traveler;
-
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -45,8 +40,6 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirm = true;
 
   late final AuthViewModel _viewModel;
-  final _pinService = PinService();
-
   @override
   void initState() {
     super.initState();
@@ -73,36 +66,14 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // ── Validación del formulario → avanza al PIN o registra directo ──
+  // ── Validación del formulario y registro ──
   void _onFormNext() {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedRole == UserRole.operator || _selectedRole == UserRole.admin) {
-      setState(() => _step = 3);
-    } else {
-      _doRegister(pin: null);
-    }
+    _doRegister();
   }
 
   // ── Registro final ─────────────────────────────────────────────────────
-  Future<void> _doRegister({required String? pin}) async {
-    if (_selectedRole != UserRole.traveler && pin != null) {
-      final isAdmin = _selectedRole == UserRole.admin;
-      final valid = await _pinService.verifyPin(
-        inputPin: pin,
-        isAdmin: isAdmin,
-      );
-      if (!valid) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('PIN incorrecto. Intenta de nuevo.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        return;
-      }
-    }
-
+  Future<void> _doRegister() async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final user = await _viewModel.register(
@@ -112,7 +83,7 @@ class _RegisterPageState extends State<RegisterPage> {
       phone: _phoneController.text.trim(),
       gender: _selectedGender ?? '',
       birthday: _birthdayController.text.trim(),
-      role: _selectedRole,
+      role: UserRole.traveler,
     );
 
     if (!mounted) return;
@@ -142,49 +113,29 @@ class _RegisterPageState extends State<RegisterPage> {
             constraints: const BoxConstraints(maxWidth: 500),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 280),
-              child: _step == 1
-                  ? _RoleSelector(
-                      key: const ValueKey('step1'),
-                      selectedRole: _selectedRole,
-                      onRoleSelected: (role) {
-                        setState(() {
-                          _selectedRole = role;
-                          _step = 2;
-                        });
-                      },
-                    )
-                  : _step == 2
-                  ? _RegistrationForm(
-                      key: const ValueKey('step2'),
-                      formKey: _formKey,
-                      nameController: _nameController,
-                      phoneController: _phoneController,
-                      emailController: _emailController,
-                      birthdayController: _birthdayController,
-                      passwordController: _passwordController,
-                      confirmController: _confirmController,
-                      selectedGender: _selectedGender,
-                      obscurePassword: _obscurePassword,
-                      obscureConfirm: _obscureConfirm,
-                      isLoading: _viewModel.isLoading,
-                      selectedRole: _selectedRole,
-                      onGenderChanged: (v) =>
-                          setState(() => _selectedGender = v),
-                      onTogglePassword: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      onToggleConfirm: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                      onBack: () => setState(() => _step = 1),
-                      onSubmit: _onFormNext,
-                      authRepository: widget.authRepository,
-                    )
-                  : _PinEntryStep(
-                      key: const ValueKey('step3'),
-                      isAdmin: _selectedRole == UserRole.admin,
-                      isLoading: _viewModel.isLoading,
-                      onBack: () => setState(() => _step = 2),
-                      onSubmit: (pin) => _doRegister(pin: pin),
-                    ),
+              child: _RegistrationForm(
+                key: const ValueKey('step2'),
+                formKey: _formKey,
+                nameController: _nameController,
+                phoneController: _phoneController,
+                emailController: _emailController,
+                birthdayController: _birthdayController,
+                passwordController: _passwordController,
+                confirmController: _confirmController,
+                selectedGender: _selectedGender,
+                obscurePassword: _obscurePassword,
+                obscureConfirm: _obscureConfirm,
+                isLoading: _viewModel.isLoading,
+                selectedRole: UserRole.traveler,
+                onGenderChanged: (v) => setState(() => _selectedGender = v),
+                onTogglePassword: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+                onToggleConfirm: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
+                onBack: () => Navigator.of(context).pop(),
+                onSubmit: _onFormNext,
+                authRepository: widget.authRepository,
+              ),
             ),
           ),
         ),
@@ -230,138 +181,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── PASO 1: Selección de rol ───────────────────────────────────────────────
-class _RoleSelector extends StatelessWidget {
-  const _RoleSelector({
-    super.key,
-    required this.selectedRole,
-    required this.onRoleSelected,
-  });
-
-  final UserRole selectedRole;
-  final ValueChanged<UserRole> onRoleSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Text(
-          'Registro',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: kFigmaTextDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Selecciona cómo quieres registrarte',
-          style: TextStyle(fontSize: 15, color: Colors.black54),
-        ),
-        const SizedBox(height: 36),
-        _RoleCard(
-          icon: Icons.backpack_outlined,
-          title: 'Viajero',
-          description:
-              'Busca y reserva alojamientos, deja reseñas y gestiona tus viajes.',
-          color: const Color(0xFF52B788),
-          onTap: () => onRoleSelected(UserRole.traveler),
-        ),
-        const SizedBox(height: 16),
-        _RoleCard(
-          icon: Icons.business_outlined,
-          title: 'Operador Turístico',
-          description:
-              'Publica y gestiona ofertas de hospedaje. Requiere PIN de acceso.',
-          color: const Color(0xFFD4A853),
-          onTap: () => onRoleSelected(UserRole.operator),
-        ),
-        const SizedBox(height: 16),
-        _RoleCard(
-          icon: Icons.admin_panel_settings_outlined,
-          title: 'Administrador',
-          description:
-              'Acceso completo a gestión de plataforma. Requiere PIN de acceso.',
-          color: const Color(0xFFBF6B3D),
-          onTap: () => onRoleSelected(UserRole.admin),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  const _RoleCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: kFigmaInputBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kFigmaInputBorder, width: 1.2),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: kFigmaTextDark,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.black38),
-          ],
-        ),
       ),
     );
   }
@@ -453,8 +272,7 @@ class _RegistrationForm extends StatelessWidget {
                 label: 'Nombre de Usuario',
                 hint: 'Escribe tu nombre completo',
                 controller: nameController,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty)
+                validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Por favor ingresa tu nombre'
                     : null,
               ),
@@ -644,7 +462,7 @@ class _RegistrationForm extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: selectedGender,
+            initialValue: selectedGender,
             style: const TextStyle(fontSize: 14, color: kFigmaTextDark),
             decoration: _inputDecoration(),
             items: const [
@@ -688,8 +506,7 @@ class _RegistrationForm extends StatelessWidget {
                 size: 18,
               ),
             ),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty)
+            validator: (v) => (v == null || v.trim().isEmpty)
                 ? 'Selecciona tu fecha de nacimiento'
                 : null,
             onTap: () async {
@@ -772,147 +589,6 @@ InputDecoration _inputDecoration({String? hint, Widget? suffix}) {
     ),
     suffixIcon: suffix,
   );
-}
-
-// ── PASO 3: Verificación de PIN ────────────────────────────────────────────
-class _PinEntryStep extends StatefulWidget {
-  const _PinEntryStep({
-    super.key,
-    required this.isAdmin,
-    required this.isLoading,
-    required this.onBack,
-    required this.onSubmit,
-  });
-
-  final bool isAdmin;
-  final bool isLoading;
-  final VoidCallback onBack;
-  final ValueChanged<String> onSubmit;
-
-  @override
-  State<_PinEntryStep> createState() => _PinEntryStepState();
-}
-
-class _PinEntryStepState extends State<_PinEntryStep> {
-  final _pinController = TextEditingController();
-  bool _obscurePin = true;
-
-  @override
-  void dispose() {
-    _pinController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final roleName =
-        widget.isAdmin ? 'Administrador' : 'Operador Turístico';
-    final roleColor =
-        widget.isAdmin ? const Color(0xFFBF6B3D) : const Color(0xFFD4A853);
-    final roleIcon = widget.isAdmin
-        ? Icons.admin_panel_settings_outlined
-        : Icons.business_outlined;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: widget.onBack,
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Verificación de PIN',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: kFigmaTextDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: roleColor.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Icon(roleIcon, color: roleColor, size: 40),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Acceso como $roleName',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: kFigmaTextDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Ingresa el PIN de acceso para este rol.\nContacta al administrador si no lo tienes.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
-        ),
-        const SizedBox(height: 32),
-        _figmaField(
-          label: 'PIN de acceso',
-          hint: '••••',
-          controller: _pinController,
-          obscureText: _obscurePin,
-          keyboardType: TextInputType.number,
-          suffix: IconButton(
-            icon: Icon(
-              _obscurePin ? Icons.visibility_off : Icons.visibility,
-              color: Colors.black54,
-            ),
-            onPressed: () => setState(() => _obscurePin = !_obscurePin),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: widget.isLoading
-                ? null
-                : () {
-                    final pin = _pinController.text.trim();
-                    if (pin.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ingresa el PIN'),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                      return;
-                    }
-                    widget.onSubmit(pin);
-                  },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kFigmaBtnPrimary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: Text(
-              widget.isLoading ? 'Verificando...' : 'Verificar y Registrar',
-              style: const TextStyle(
-                color: kFigmaTextDark,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // ── PÁGINA DE LOGIN ────────────────────────────────────────────────────────
@@ -1031,8 +707,9 @@ class _LoginPageState extends State<LoginPage> {
                             return 'Ingresa tu correo';
                           }
                           final email = v.trim().toLowerCase();
-                          if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-                              .hasMatch(email)) {
+                          if (!RegExp(
+                            r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                          ).hasMatch(email)) {
                             return 'Correo no válido';
                           }
                           if (!email.endsWith('@correo.unimet.edu.ve')) {
@@ -1107,9 +784,12 @@ class _LoginPageState extends State<LoginPage> {
                                 ? null
                                 : () async {
                                     if (!(_formKey.currentState?.validate() ??
-                                        false)) return;
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
+                                        false)) {
+                                      return;
+                                    }
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
                                     final navigator = Navigator.of(context);
                                     final user = await _viewModel.login(
                                       email: _emailController.text.trim(),

@@ -1,9 +1,78 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUnimetUser() {
+      return isSignedIn() &&
+        request.auth.token.email.matches('.*@correo\\.unimet\\.edu\\.ve$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        (request.auth.token.email == 'admin@correo.unimet.edu.ve' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profile.role == 'admin');
+    }
+
+    function isOperator() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profile.role == 'operator';
+    }
+
+    function isSafeSelfProfileUpdate() {
+      return request.resource.data.profile.get('role', 'traveler') ==
+          resource.data.profile.get('role', 'traveler') &&
+        request.resource.data.profile.get('operatorPin', '') ==
+          resource.data.profile.get('operatorPin', '') &&
+        (
+          request.resource.data.profile.get('operatorRequestStatus', '') ==
+            resource.data.profile.get('operatorRequestStatus', '') ||
+          request.resource.data.profile.get('operatorRequestStatus', '') == 'pending'
+        ) &&
+        (
+          request.resource.data.profile.get('hasUnreadOperatorPin', false) ==
+            resource.data.profile.get('hasUnreadOperatorPin', false) ||
+          (
+            resource.data.profile.get('hasUnreadOperatorPin', false) == true &&
+            request.resource.data.profile.get('hasUnreadOperatorPin', false) == false
+          )
+        );
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && 
-      request.auth.token.email.matches('.*@correo\\.unimet\\.edu\\.ve$');
+      allow read: if isUnimetUser();
+      allow create: if isUnimetUser() && request.auth.uid == userId &&
+        (
+          request.resource.data.profile.role == 'traveler' ||
+          (
+            request.auth.token.email == 'admin@correo.unimet.edu.ve' &&
+            request.resource.data.profile.role == 'admin'
+          )
+        );
+      allow update: if isUnimetUser() &&
+        (isAdmin() || (request.auth.uid == userId && isSafeSelfProfileUpdate()));
+      allow delete: if isAdmin();
+    }
+
+    match /listings/{listingId} {
+      allow read: if isUnimetUser();
+      allow create: if isUnimetUser() && (isOperator() || isAdmin());
+      allow update, delete: if isUnimetUser() &&
+        (isAdmin() || resource.data.ownerId == request.auth.uid);
+    }
+
+    match /operator_requests/{requestId} {
+      allow read: if isUnimetUser();
+      allow create: if isUnimetUser() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /system_config/{docId} {
+      allow read: if isUnimetUser();
+      allow write: if isAdmin();
     }
   }
 }

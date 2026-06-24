@@ -13,6 +13,9 @@ class AppUser {
     this.birthday = '',
     this.profileImage = '',
     this.role = UserRole.traveler,
+    this.operatorPin = '',
+    this.hasUnreadOperatorPin = false,
+    this.operatorRequestStatus = '',
   });
 
   final String id;
@@ -23,6 +26,9 @@ class AppUser {
   final String birthday;
   final String profileImage;
   final UserRole role;
+  final String operatorPin;
+  final bool hasUnreadOperatorPin;
+  final String operatorRequestStatus;
 
   bool get isTraveler => role == UserRole.traveler;
   bool get isOperator => role == UserRole.operator;
@@ -44,6 +50,25 @@ class AppUser {
       'birthday': birthday,
       'profileImage': profileImage,
       'role': role.name,
+      'operatorPin': operatorPin,
+      'hasUnreadOperatorPin': hasUnreadOperatorPin.toString(),
+      'operatorRequestStatus': operatorRequestStatus,
+    };
+  }
+
+  Map<String, dynamic> toFirestoreMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'gender': gender,
+      'birthday': birthday,
+      'profileImage': profileImage,
+      'role': role.name,
+      'operatorPin': operatorPin,
+      'hasUnreadOperatorPin': hasUnreadOperatorPin,
+      'operatorRequestStatus': operatorRequestStatus,
     };
   }
 
@@ -60,6 +85,12 @@ class AppUser {
         (r) => r.name == profile['role'],
         orElse: () => UserRole.traveler,
       ),
+      operatorPin: (profile['operatorPin'] ?? '').toString(),
+      hasUnreadOperatorPin:
+          profile['hasUnreadOperatorPin'] == true ||
+          profile['hasUnreadOperatorPin'].toString() == 'true',
+      operatorRequestStatus: (profile['operatorRequestStatus'] ?? '')
+          .toString(),
     );
   }
 
@@ -72,6 +103,9 @@ class AppUser {
     String? birthday,
     String? profileImage,
     UserRole? role,
+    String? operatorPin,
+    bool? hasUnreadOperatorPin,
+    String? operatorRequestStatus,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -82,6 +116,10 @@ class AppUser {
       birthday: birthday ?? this.birthday,
       profileImage: profileImage ?? this.profileImage,
       role: role ?? this.role,
+      operatorPin: operatorPin ?? this.operatorPin,
+      hasUnreadOperatorPin: hasUnreadOperatorPin ?? this.hasUnreadOperatorPin,
+      operatorRequestStatus:
+          operatorRequestStatus ?? this.operatorRequestStatus,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Selector de imágenes
 
 import 'data/repositories/auth_repository.dart';
+import 'data/services/operator_request_service.dart';
 import 'domain/models/app_user.dart';
 import 'ui/features/auth/view_models/auth_view_model.dart';
 
@@ -27,6 +28,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _birthdayController;
   String _selectedGender = 'Otro';
   late final AuthViewModel _viewModel;
+  final _operatorRequestService = OperatorRequestService();
 
   // Variable para almacenar los bytes de la foto de perfil
   Uint8List? _profileImageBytes;
@@ -61,6 +63,11 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_currentUserData['profileImage'] != null &&
         _currentUserData['profileImage']!.isNotEmpty) {
       _profileImageBytes = base64Decode(_currentUserData['profileImage']!);
+    }
+
+    if (_currentUserData['hasUnreadOperatorPin'] == 'true') {
+      _operatorRequestService.markOperatorPinSeen(_currentUserData['id'] ?? '');
+      _currentUserData['hasUnreadOperatorPin'] = 'false';
     }
   }
 
@@ -138,6 +145,59 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  AppUser _currentAppUser() {
+    final role = UserRole.values.firstWhere(
+      (role) => role.name == (_currentUserData['role'] ?? 'traveler'),
+      orElse: () => UserRole.traveler,
+    );
+    return AppUser(
+      id: _currentUserData['id'] ?? '',
+      name: _currentUserData['name'] ?? '',
+      email: _currentUserData['email'] ?? '',
+      phone: _currentUserData['phone'] ?? '',
+      gender: _currentUserData['gender'] ?? '',
+      birthday: _currentUserData['birthday'] ?? '',
+      profileImage: _currentUserData['profileImage'] ?? '',
+      role: role,
+      operatorPin: _currentUserData['operatorPin'] ?? '',
+      hasUnreadOperatorPin: _currentUserData['hasUnreadOperatorPin'] == 'true',
+      operatorRequestStatus: _currentUserData['operatorRequestStatus'] ?? '',
+    );
+  }
+
+  Future<void> _showOperatorRequestDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Solicitud de operador'),
+        content: const Text('Esta función será revisada por el administrador'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Solicitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _operatorRequestService.submit(_currentAppUser());
+    if (!mounted) return;
+    setState(() {
+      _currentUserData['operatorRequestStatus'] = 'pending';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Solicitud enviada al administrador'),
+        backgroundColor: Color(0xFF1B4332),
       ),
     );
   }
@@ -223,6 +283,7 @@ class _ProfilePageState extends State<ProfilePage> {
     String email = _currentUserData['email'] ?? 'correo@unimet.edu.ve';
     String phone = _currentUserData['phone'] ?? '+58 --- -------';
     String birthday = _currentUserData['birthday'] ?? 'dd/mm/aaaa';
+    String operatorPin = _currentUserData['operatorPin'] ?? '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 35),
@@ -316,6 +377,8 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           _buildCardInfoRow('Sitios Reservados:', '0'),
+          if (operatorPin.isNotEmpty)
+            _buildCardInfoRow('PIN operador:', operatorPin),
 
           const SizedBox(height: 40),
 
@@ -406,9 +469,25 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         _buildMenuButton(
           icon: Icons.engineering_rounded,
-          title: 'Solicitar permiso para convertirse en administrador',
-          onTap: () => _showComingSoonSnackBar('Solicitud de Administrator'),
+          title: 'Solicitud de operador',
+          onTap: _showOperatorRequestDialog,
         ),
+        if ((_currentUserData['operatorRequestStatus'] ?? '') == 'pending')
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Tu solicitud está pendiente de revisión.',
+              style: TextStyle(color: Colors.black54),
+            ),
+          ),
+        if ((_currentUserData['operatorRequestStatus'] ?? '') == 'rejected')
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Tu solicitud ha sido rechazada.',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
       ],
     );
   }
@@ -523,6 +602,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   profileImage: _profileImageBytes != null
                       ? base64Encode(_profileImageBytes!)
                       : (_currentUserData['profileImage'] ?? ''),
+                  role: _currentAppUser().role,
+                  operatorPin: _currentUserData['operatorPin'] ?? '',
+                  hasUnreadOperatorPin:
+                      _currentUserData['hasUnreadOperatorPin'] == 'true',
+                  operatorRequestStatus:
+                      _currentUserData['operatorRequestStatus'] ?? '',
                 );
 
                 final savedUser = await _viewModel.updateProfile(updatedUser);

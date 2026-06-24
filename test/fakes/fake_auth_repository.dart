@@ -45,7 +45,7 @@ class FakeAuthRepository implements AuthRepository {
     required String phone,
     required String gender,
     required String birthday,
-     required UserRole role, 
+    UserRole role = UserRole.traveler,
   }) async {
     final error = nextError;
     if (error != null) {

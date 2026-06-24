@@ -108,21 +108,25 @@ class _OperatorDashboardState extends State<OperatorDashboard>
   void _acceptRequest(ReservationRequest req) {
     setState(() {
       final idx = _requests.indexWhere((r) => r.id == req.id);
-      if (idx != -1) _requests[idx] = req.copyWith(status: RequestStatus.accepted);
+      if (idx != -1) {
+        _requests[idx] = req.copyWith(status: RequestStatus.accepted);
+      }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reserva aceptada')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Reserva aceptada')));
   }
 
   void _rejectRequest(ReservationRequest req) {
     setState(() {
       final idx = _requests.indexWhere((r) => r.id == req.id);
-      if (idx != -1) _requests[idx] = req.copyWith(status: RequestStatus.rejected);
+      if (idx != -1) {
+        _requests[idx] = req.copyWith(status: RequestStatus.rejected);
+      }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reserva rechazada')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Reserva rechazada')));
   }
 
   @override
@@ -223,30 +227,49 @@ class _OperatorDashboardState extends State<OperatorDashboard>
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: DropdownButtonFormField<String>(
-                            value: typeValue,
+                            initialValue: typeValue,
                             decoration: const InputDecoration(
                               labelText: 'Tipo de alojamiento',
                               border: OutlineInputBorder(),
                             ),
-                            items: ['Hotel', 'Posada', 'Cabaña', 'Apartamento', 'Resort']
-                                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                                .toList(),
-                            onChanged: (v) => setS(() => typeValue = v ?? typeValue),
+                            items:
+                                [
+                                      'Hotel',
+                                      'Posada',
+                                      'Cabaña',
+                                      'Apartamento',
+                                      'Resort',
+                                    ]
+                                    .map(
+                                      (t) => DropdownMenuItem(
+                                        value: t,
+                                        child: Text(t),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (v) =>
+                                setS(() => typeValue = v ?? typeValue),
                           ),
                         ),
                         // Categoría
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: DropdownButtonFormField<String>(
-                            value: catValue,
+                            initialValue: catValue,
                             decoration: const InputDecoration(
                               labelText: 'Categoría',
                               border: OutlineInputBorder(),
                             ),
                             items: ['Estándar', 'Premium', 'Económico', 'Lujo']
-                                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
                                 .toList(),
-                            onChanged: (v) => setS(() => catValue = v ?? catValue),
+                            onChanged: (v) =>
+                                setS(() => catValue = v ?? catValue),
                           ),
                         ),
                       ],
@@ -263,7 +286,8 @@ class _OperatorDashboardState extends State<OperatorDashboard>
                   onPressed: () {
                     if (!formKey.currentState!.validate()) return;
                     final saved = AlojaListing(
-                      id: listing?.id ??
+                      id:
+                          listing?.id ??
                           'listing-${DateTime.now().microsecondsSinceEpoch}',
                       ownerId: widget.user.id,
                       title: titleC.text.trim(),
@@ -294,18 +318,28 @@ class _OperatorDashboardState extends State<OperatorDashboard>
       },
     );
 
-    for (final c in [titleC, cityC, regionC, priceC, guestsC, imageC, maxResC]) {
+    for (final c in [
+      titleC,
+      cityC,
+      regionC,
+      priceC,
+      guestsC,
+      imageC,
+      maxResC,
+    ]) {
       c.dispose();
     }
 
     if (saved == null) return;
     widget.onSaveListing(saved);
-    if (mounted) {
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(listing == null
-              ? 'Oferta enviada para aprobación'
-              : 'Oferta actualizada'),
+          content: Text(
+            listing == null
+                ? 'Oferta enviada para aprobación'
+                : 'Oferta actualizada',
+          ),
         ),
       );
     }
@@ -329,9 +363,13 @@ Widget _opField(
       ),
       validator: required
           ? (v) {
-              if (v == null || v.trim().isEmpty) return 'Campo requerido';
+              if (v == null || v.trim().isEmpty) {
+                return 'Campo requerido';
+              }
               if (type == TextInputType.number &&
-                  int.tryParse(v.trim()) == null) return 'Número válido';
+                  int.tryParse(v.trim()) == null) {
+                return 'Número válido';
+              }
               return null;
             }
           : null,
@@ -379,9 +417,7 @@ class _MyListingsTab extends StatelessWidget {
         ),
         Expanded(
           child: listings.isEmpty
-              ? const Center(
-                  child: Text('Aún no tienes ofertas publicadas'),
-                )
+              ? const Center(child: Text('Aún no tienes ofertas publicadas'))
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: listings.length,
@@ -450,7 +486,9 @@ class _RequestsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pending = requests.where((r) => r.status == RequestStatus.pending).toList();
+    final pending = requests
+        .where((r) => r.status == RequestStatus.pending)
+        .toList();
     if (pending.isEmpty) {
       return const Center(child: Text('No hay solicitudes pendientes'));
     }

@@ -4,6 +4,7 @@ import '../../domain/models/app_user.dart';
 
 abstract class UserProfileService {
   Future<AppUser?> getUser(String id);
+  Stream<List<AppUser>> watchUsers();
   Future<void> createUser(AppUser user);
   Future<void> updateUser(AppUser user);
 }
@@ -22,14 +23,26 @@ class FirestoreUserProfileService implements UserProfileService {
     final snapshot = await _users.doc(id).get();
     if (!snapshot.exists) return null;
     final data = snapshot.data() ?? const {};
-    final profile = Map<String, dynamic>.from(data['profile'] ?? const {});
+    final profile = _profileFromData(data);
     return AppUser.fromProfileMap(id, profile);
+  }
+
+  @override
+  Stream<List<AppUser>> watchUsers() {
+    return _users.orderBy('createdAt', descending: true).snapshots().map((
+      snapshot,
+    ) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return AppUser.fromProfileMap(doc.id, _profileFromData(data));
+      }).toList();
+    });
   }
 
   @override
   Future<void> createUser(AppUser user) {
     return _users.doc(user.id).set({
-      'profile': user.toProfileMap(),
+      'profile': user.toFirestoreMap(),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -37,9 +50,15 @@ class FirestoreUserProfileService implements UserProfileService {
 
   @override
   Future<void> updateUser(AppUser user) {
-    return _users.doc(user.id).update({
-      'profile': user.toProfileMap(),
+    return _users.doc(user.id).set({
+      'profile': user.toFirestoreMap(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
+  }
+
+  Map<String, dynamic> _profileFromData(Map<String, dynamic> data) {
+    final profile = Map<String, dynamic>.from(data['profile'] ?? const {});
+    if (profile.isNotEmpty) return profile;
+    return Map<String, dynamic>.from(data);
   }
 }

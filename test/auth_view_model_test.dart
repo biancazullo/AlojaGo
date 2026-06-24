@@ -20,7 +20,7 @@ void main() {
 
     expect(user, isNotNull);
     expect(viewModel.isAuthenticated, isTrue);
-    expect(viewModel.currentUser?.firstName, 'Usuario Invalido');
+    expect(viewModel.currentUser?.firstName, 'Usuario');
     expect(viewModel.errorMessage, isNull);
     expect(viewModel.isLoading, isFalse);
   });
