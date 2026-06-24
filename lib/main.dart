@@ -343,7 +343,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
               'phone': _userPhone,
               'gender': _userGender,
               'birthday': _userBirthday,
-              'role': _userRole.name,
+              'role': _user.name,
               'profileImage': _profileImage,
               'operatorPin': _operatorPin,
               'hasUnreadOperatorPin': _hasUnreadOperatorPin.toString(),
@@ -444,7 +444,7 @@ class _AlojaHomePageState extends State<AlojaHomePage> {
 
     switch (_userRole) {
       case UserRole.traveler:
-        .of(context).push(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => TravelerDashboard(
               user: currentUser,
